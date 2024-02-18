@@ -1,0 +1,9 @@
+# My very cool program
+
+a := 3;
+{
+    b := 3;
+}
+a = a + 1;
+
+c := a * b + 1;
