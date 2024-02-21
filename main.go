@@ -6,6 +6,7 @@ import (
 	"simpl/intpr"
 	"simpl/lexer"
 	"simpl/parser"
+    "simpl/ast"
 )
 
 func main() {
@@ -28,20 +29,25 @@ func main() {
 	}
 	memory := intpr.NewMemory()
 
+    logic := []*ast.AST{}
+    scope := 0
 	for len(tokens) != 0 {
-		tree, astErr := parser.Parse(&tokens)
+		tree, astErr := parser.Parse(&tokens, &scope)
 		if astErr != nil {
 			astErr.Print()
 			break
 		}
+        logic = append(logic, tree)
+	}
+    for _, tree := range logic {
 		intprErr := intpr.Run(memory, tree)
 		if intprErr != nil {
 			intprErr.Print()
 			break
 		}
-	}
+    }
 	fmt.Println("Memory:")
-	for k, v := range memory.Vars {
-		fmt.Printf("%s = %d\n", k, v)
+	for _, m := range *memory {
+		fmt.Println(m)
 	}
 }

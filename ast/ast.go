@@ -22,13 +22,14 @@ type Node struct {
 }
 
 type AST struct {
+    Scope int
 	Root       *Node
 	prevParent *Node
 	prev       *Node
 }
 
 func NewAST() AST {
-	return AST{nil, nil, nil}
+	return AST{}
 }
 
 func (t *AST) Insert(node *Node) *errors.SyntaxError {

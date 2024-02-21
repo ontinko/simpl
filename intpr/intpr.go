@@ -7,45 +7,64 @@ import (
 	"strconv"
 )
 
-type Memory struct {
-	Vars map[string]int
-}
+type Memory []map[string]int
 
 func NewMemory() *Memory {
 	return &Memory{map[string]int{}}
 }
 
 func (m *Memory) Get(token tokens.Token) (int, *errors.RuntimeError) {
-	value, found := m.Vars[token.Value]
-	if !found {
-		return 0, &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
+	for i := len(*m) - 1; i >= 0; i-- {
+		val, found := (*m)[i][token.Value]
+		if found {
+			return val, nil
+		}
 	}
-	return value, nil
+	return 0, &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
+}
+
+func (m *Memory) IsDefined(name string) bool {
+	for i := len(*m) - 1; i >= 0; i-- {
+		_, found := (*m)[i][name]
+		if found {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Memory) isDefinedInScope(name string, scope int) bool {
+    _, found := (*m)[scope][name]
+    return found
 }
 
 func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
+	if tree.Scope < len(*mem)-1 {
+		*mem = (*mem)[:tree.Scope+1]
+	}
+    for tree.Scope >= len(*mem) {
+		*mem = append(*mem, map[string]int{})
+    }
 	node := tree.Root
 	switch node.Token.Type {
 	case tokens.COLON_EQUAL:
-		_, found := mem.Vars[node.Left.Token.Value]
-		if found {
+		if mem.isDefinedInScope(node.Left.Token.Value, tree.Scope) {
 			return &errors.RuntimeError{Message: "Variable reassignment not allowed", Line: node.Token.Line, Char: node.Token.Char}
 		}
 		value, err := eval(mem, node.Right)
 		if err != nil {
 			return err
 		}
-		mem.Vars[node.Left.Token.Value] = value
+		(*mem)[tree.Scope][node.Left.Token.Value] = value
 	default:
-		_, found := mem.Vars[node.Left.Token.Value]
-		if !found {
+		if !mem.IsDefined(node.Left.Token.Value) {
 			return &errors.RuntimeError{Message: "Undefined variable", Line: node.Token.Line, Char: node.Token.Char}
 		}
 		value, err := eval(mem, node.Right)
 		if err != nil {
 			return err
 		}
-		mem.Vars[node.Left.Token.Value] = value
+		(*mem)[tree.Scope][node.Left.Token.Value] = value
 	}
 	return nil
 }
