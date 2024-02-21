@@ -23,64 +23,50 @@ func (m *Memory) Get(token tokens.Token) (int, *errors.RuntimeError) {
 	return 0, &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
 }
 
-func (m *Memory) Set(name string, value int) {
-    (*m)[len(*m) - 1][name] = value
+func (m *Memory) Set(token tokens.Token, value int) *errors.RuntimeError {
+	name := token.Value
+	_, defined := (*m)[len(*m)-1][name]
+	if !defined {
+		(*m)[len(*m)-1][name] = value
+		return nil
+	}
+	return &errors.RuntimeError{Message: "Variable reassignment not allowed", Line: token.Line, Char: token.Char}
 }
 
-func (m *Memory) Update(name string, value int) {
-    for i := len(*m) - 1; i >= 0; i-- {
-        _, found := (*m)[i][name]
-        if found {
-            (*m)[i][name] = value
-            break
-        }
-    }
-}
-
-func (m *Memory) IsDefined(name string) bool {
+func (m *Memory) Update(token tokens.Token, value int) *errors.RuntimeError {
+	name := token.Value
 	for i := len(*m) - 1; i >= 0; i-- {
 		_, found := (*m)[i][name]
 		if found {
-			return true
+			(*m)[i][name] = value
+			return nil
 		}
 	}
-	return false
-}
-
-func (m *Memory) isDefinedInScope(name string, scope int) bool {
-    _, found := (*m)[scope][name]
-    return found
+	return &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
 }
 
 func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
 	if tree.Scope < len(*mem)-1 {
 		*mem = (*mem)[:tree.Scope+1]
 	}
-    for tree.Scope >= len(*mem) {
+	for tree.Scope >= len(*mem) {
 		*mem = append(*mem, map[string]int{})
-    }
+	}
 	node := tree.Root
 	switch node.Token.Type {
 	case tokens.COLON_EQUAL:
-		if mem.isDefinedInScope(node.Left.Token.Value, tree.Scope) {
-			return &errors.RuntimeError{Message: "Variable reassignment not allowed", Line: node.Token.Line, Char: node.Token.Char}
-		}
 		value, err := eval(mem, node.Right)
 		if err != nil {
 			return err
 		}
-        mem.Set(node.Left.Token.Value, value)
+		return mem.Set(node.Left.Token, value)
 	default:
-		if !mem.IsDefined(node.Left.Token.Value) {
-			return &errors.RuntimeError{Message: "Undefined variable", Line: node.Token.Line, Char: node.Token.Char}
-		}
 		value, err := eval(mem, node.Right)
 		if err != nil {
 			return err
 		}
-        mem.Update(node.Left.Token.Value, value)
+		return mem.Update(node.Left.Token, value)
 	}
-	return nil
 }
 
 func eval(mem *Memory, node *ast.Node) (int, *errors.RuntimeError) {
