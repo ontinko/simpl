@@ -24,7 +24,7 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 	for start < sourceSize {
 		c := source[start]
 		if singleChars[c] != 0 {
-			token := tokens.NewToken(singleChars[c], "", line, start)
+			token := tokens.NewToken(singleChars[c], "", line, start - lineStart + 1)
 			result = append(result, token)
 			start++
 			continue
@@ -52,11 +52,11 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			start++
 		case '{':
 			parens = append(parens, '{')
-			token := tokens.NewToken(tokens.LEFT_BRACE, "", line, start)
+			token := tokens.NewToken(tokens.LEFT_BRACE, "", line, start-lineStart+1)
 			result = append(result, token)
 			start++
 		case '}':
-			token := tokens.NewToken(tokens.RIGHT_BRACE, "", line, start)
+			token := tokens.NewToken(tokens.RIGHT_BRACE, "", line, start-lineStart+1)
 			result = append(result, token)
 			start++
 			if len(parens) == 0 {
@@ -134,6 +134,6 @@ func readIdentifier(source *string, line, start int, lineStart int) (tokens.Toke
 		}
 		end++
 	}
-	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], line, start-lineStart+1)
+	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], line + 1, start-lineStart+1)
 	return token, end
 }

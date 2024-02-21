@@ -20,7 +20,7 @@ func main() {
 		fmt.Println("File not found")
 		os.Exit(64)
 	}
-	tokens, errs := lexer.Tokenize(string(source), 0)
+	tokens, errs := lexer.Tokenize(string(source), 1)
 	if len(errs) > 0 {
 		for _, e := range errs {
 			e.Print()

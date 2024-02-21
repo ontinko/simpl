@@ -33,7 +33,7 @@ func (m *Memory) Set(token tokens.Token, opToken tokens.Token, value int) *error
 	return &errors.RuntimeError{Message: "Variable reassignment not allowed", Line: opToken.Line, Char: opToken.Char}
 }
 
-func (m *Memory) Update(token tokens.Token, opToken tokens.Token, value int) *errors.RuntimeError {
+func (m *Memory) Update(token tokens.Token, value int) *errors.RuntimeError {
 	name := token.Value
 	for i := len(*m) - 1; i >= 0; i-- {
 		_, found := (*m)[i][name]
@@ -42,7 +42,7 @@ func (m *Memory) Update(token tokens.Token, opToken tokens.Token, value int) *er
 			return nil
 		}
 	}
-	return &errors.RuntimeError{Message: "Undefined variable", Line: opToken.Line, Char: opToken.Char}
+	return &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
 }
 
 func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
@@ -65,7 +65,7 @@ func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
 		if err != nil {
 			return err
 		}
-		return mem.Update(node.Left.Token, node.Token, value)
+		return mem.Update(node.Left.Token, value)
 	}
 }
 
