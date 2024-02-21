@@ -22,7 +22,7 @@ type Node struct {
 }
 
 type AST struct {
-    Scope int
+	Scope      int
 	Root       *Node
 	prevParent *Node
 	prev       *Node
