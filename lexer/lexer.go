@@ -19,6 +19,7 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 	errs := []errors.SyntaxError{}
 	parens := []rune{}
 	start := 0
+	lineStart := 0
 	sourceSize := len(source)
 	for start < sourceSize {
 		c := source[start]
@@ -32,6 +33,7 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 		case '\n':
 			line++
 			start++
+			lineStart = start
 		case ' ':
 			start++
 		case '#':
@@ -39,14 +41,14 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			start = newStart
 		case ':':
 			if peek(&source, start+1) == '=' {
-				token := tokens.NewToken(tokens.COLON_EQUAL, "", line, start)
+				token := tokens.NewToken(tokens.COLON_EQUAL, "", line, start-lineStart+1)
 				result = append(result, token)
 				start += 2
 				continue
 			}
-			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start)
+			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start-lineStart+1)
 			result = append(result, token)
-			errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line, Char: start})
+			errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line + 1, Char: start - lineStart + 1})
 			start++
 		case '{':
 			parens = append(parens, '{')
@@ -58,31 +60,31 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			result = append(result, token)
 			start++
 			if len(parens) == 0 {
-				errs = append(errs, errors.SyntaxError{Message: "Unexpected {", Line: line, Char: start})
+				errs = append(errs, errors.SyntaxError{Message: "Unexpected {", Line: line + 1, Char: start - lineStart + 1})
 			} else if parens[len(parens)-1] != '{' {
-				errs = append(errs, errors.SyntaxError{Message: "Unexpected {: expected something else lmao", Line: line, Char: start})
+				errs = append(errs, errors.SyntaxError{Message: "Unexpected {: expected something else lmao", Line: line + 1, Char: start - lineStart + 1})
 			} else {
 				parens = parens[:len(parens)-1]
 			}
 		default:
 			if isDigit(c) {
-				token, newStart := readNumber(&source, line, start)
+				token, newStart := readNumber(&source, line, start, lineStart)
 				result = append(result, token)
 				start = newStart
 			} else if isAlpha(c) {
-				token, newStart := readIdentifier(&source, line, start)
+				token, newStart := readIdentifier(&source, line, start, lineStart)
 				result = append(result, token)
 				start = newStart
 			} else {
-				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start)
-				errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line, Char: start})
+				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start-lineStart+1)
+				errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line + 1, Char: start - lineStart + 1})
 				result = append(result, token)
 				start++
 			}
 		}
 	}
 	for range parens {
-		errs = append(errs, errors.SyntaxError{Message: "Expected }", Line: line, Char: start - 1})
+		errs = append(errs, errors.SyntaxError{Message: "Expected }", Line: line + 1, Char: start})
 	}
 	return result, errs
 }
@@ -114,16 +116,16 @@ func isAlpha(c byte) bool {
 		c == '_'
 }
 
-func readNumber(source *string, line, start int) (tokens.Token, int) {
+func readNumber(source *string, line, start int, lineStart int) (tokens.Token, int) {
 	end := start + 1
 	for isDigit(peek(source, end)) {
 		end++
 	}
-	token := tokens.NewToken(tokens.NUMBER, (*source)[start:end], line, start)
+	token := tokens.NewToken(tokens.NUMBER, (*source)[start:end], line, start-lineStart+1)
 	return token, end
 }
 
-func readIdentifier(source *string, line, start int) (tokens.Token, int) {
+func readIdentifier(source *string, line, start int, lineStart int) (tokens.Token, int) {
 	end := start + 1
 	for {
 		c := (*source)[end]
@@ -132,6 +134,6 @@ func readIdentifier(source *string, line, start int) (tokens.Token, int) {
 		}
 		end++
 	}
-	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], line, start)
+	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], line, start-lineStart+1)
 	return token, end
 }
