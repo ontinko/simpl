@@ -1,9 +1,8 @@
 # My very cool program
 
 a := 3;
-b := 3;
+b := 1;
 {
-    b := 1000;
     {
         b = b + 999;
     }

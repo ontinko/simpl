@@ -23,6 +23,20 @@ func (m *Memory) Get(token tokens.Token) (int, *errors.RuntimeError) {
 	return 0, &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
 }
 
+func (m *Memory) Set(name string, value int) {
+    (*m)[len(*m) - 1][name] = value
+}
+
+func (m *Memory) Update(name string, value int) {
+    for i := len(*m) - 1; i >= 0; i-- {
+        _, found := (*m)[i][name]
+        if found {
+            (*m)[i][name] = value
+            break
+        }
+    }
+}
+
 func (m *Memory) IsDefined(name string) bool {
 	for i := len(*m) - 1; i >= 0; i-- {
 		_, found := (*m)[i][name]
@@ -55,7 +69,7 @@ func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
 		if err != nil {
 			return err
 		}
-		(*mem)[tree.Scope][node.Left.Token.Value] = value
+        mem.Set(node.Left.Token.Value, value)
 	default:
 		if !mem.IsDefined(node.Left.Token.Value) {
 			return &errors.RuntimeError{Message: "Undefined variable", Line: node.Token.Line, Char: node.Token.Char}
@@ -64,7 +78,7 @@ func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
 		if err != nil {
 			return err
 		}
-		(*mem)[tree.Scope][node.Left.Token.Value] = value
+        mem.Update(node.Left.Token.Value, value)
 	}
 	return nil
 }
