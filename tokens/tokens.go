@@ -34,6 +34,13 @@ var Representations map[TokenType]string = map[TokenType]string{
 	RIGHT_BRACE: "RIGHT_BRACE: }",
 }
 
+var Priorities map[TokenType]int = map[TokenType]int{
+    PLUS: 1,
+    MINUS: 1,
+    STAR: 2,
+    SLASH: 2,
+}
+
 type Token struct {
 	Type  TokenType
 	Value string

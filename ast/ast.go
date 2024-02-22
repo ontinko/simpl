@@ -87,7 +87,9 @@ func (t *AST) Rearrange() {
 	for i := stackSize - 1; i > 1; i-- {
 		node := stack[i]
 		parent := stack[i-1]
-		if (node.Token.Type == tokens.PLUS || node.Token.Type == tokens.MINUS) && (parent.Token.Type == tokens.STAR || parent.Token.Type == tokens.SLASH) {
+        nodePriority := tokens.Priorities[node.Token.Type]
+        parentPriority := tokens.Priorities[parent.Token.Type]
+		if nodePriority != 0 && nodePriority < parentPriority {
 			parentParent := stack[i-2]
 			node.Left, node.Right, parent.Right = node.Right, parent, node.Left
 			parentParent.Right = node
