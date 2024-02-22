@@ -11,7 +11,11 @@ func Parse(tokens *[]sTokens.Token, scope *int) (*ast.AST, *errors.SyntaxError) 
 	for i, t := range *tokens {
 		var nType ast.NodeType
 		switch t.Type {
+        // it would probably be better to have this kind of check in the tree
 		case sTokens.LEFT_BRACE:
+            if tree.Root != nil {
+                return nil, &errors.SyntaxError{Message: "Unexpected {", Line: t.Line, Char: t.Char}
+            }
 			(*scope)++
 			continue
 		case sTokens.RIGHT_BRACE:
