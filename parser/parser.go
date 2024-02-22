@@ -42,5 +42,6 @@ func Parse(tokens *[]sTokens.Token, scope *int) (*ast.AST, *errors.SyntaxError) 
 			break
 		}
 	}
+	tree.Rearrange()
 	return &tree, nil
 }

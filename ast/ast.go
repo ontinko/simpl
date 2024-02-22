@@ -73,6 +73,29 @@ func (t *AST) Insert(node *Node) *errors.SyntaxError {
 	return err
 }
 
+func (t *AST) Rearrange() {
+	stack := []*Node{t.Root}
+	stackSize := 1
+	for {
+		node := stack[stackSize-1]
+		if node.Right == nil {
+			break
+		}
+		stack = append(stack, node.Right)
+		stackSize++
+	}
+	for i := stackSize - 1; i > 1; i-- {
+		node := stack[i]
+		parent := stack[i-1]
+		if (node.Token.Type == tokens.PLUS || node.Token.Type == tokens.MINUS) && (parent.Token.Type == tokens.STAR || parent.Token.Type == tokens.SLASH) {
+			parentParent := stack[i-2]
+			node.Left, node.Right, parent.Right = node.Right, parent, node.Left
+			parentParent.Right = node
+			stack[i], stack[i-1] = stack[i-1], stack[i]
+		}
+	}
+}
+
 func (t *AST) Traverse() {
 	node := t.Root
 	if node == nil {
