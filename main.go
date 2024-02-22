@@ -46,8 +46,10 @@ func main() {
 			break
 		}
 	}
-	fmt.Println("Memory:")
+	fmt.Println("Results:")
 	for _, m := range *memory {
-		fmt.Println(m)
+		for k, v := range m {
+			fmt.Printf("%s = %d\n", k, v)
+		}
 	}
 }
