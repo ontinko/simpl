@@ -22,8 +22,8 @@ type Node struct {
 }
 
 type AST struct {
-	Scope      int
-	Root       *Node
+	Scope int
+	Root  *Node
 }
 
 func NewAST() AST {

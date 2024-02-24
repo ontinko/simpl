@@ -28,7 +28,7 @@ func main() {
 	}
 	memory := intpr.NewMemory()
 
-    parseSource := parser.New(tokens)
+	parseSource := parser.New(tokens)
 	logic, error := parseSource.Parse()
 	if error != nil {
 		error.Print()

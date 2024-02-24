@@ -95,6 +95,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
 				return []*ast.AST{}, err
 			}
 			tree.Root = expression
+            tree.Scope = scope
 			trees = append(trees, &tree)
 			s.current += 2
 		case sTokens.EOF:
