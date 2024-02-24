@@ -6,42 +6,97 @@ import (
 	sTokens "simpl/tokens"
 )
 
-func Parse(tokens *[]sTokens.Token, scope *int) (*ast.AST, *errors.SyntaxError) {
-	tree := ast.NewAST()
-	for i, t := range *tokens {
-		var nType ast.NodeType
-		switch t.Type {
-		// it would probably be better to have this kind of check in the tree
-		case sTokens.LEFT_BRACE:
-			if tree.Root != nil {
-				return nil, &errors.SyntaxError{Message: "Unexpected {", Line: t.Line, Char: t.Char}
-			}
-			(*scope)++
-			continue
-		case sTokens.RIGHT_BRACE:
-			(*scope)--
-			continue
-		case sTokens.PLUS, sTokens.MINUS, sTokens.STAR, sTokens.SLASH:
-			nType = ast.Expression
-		case sTokens.NUMBER, sTokens.IDENTIFIER:
-			nType = ast.Default
-		default:
-			nType = ast.Statement
-		}
-		if i == len(*tokens)-1 && t.Type != sTokens.SEMICOLON {
-			return nil, &errors.SyntaxError{Message: "Expecting semicolon at the end of a statement", Line: t.Line, Char: t.Char}
-		}
-		tree.Scope = (*scope)
-		node := &ast.Node{Token: t, Type: nType, Left: nil, Right: nil}
-		err := tree.Insert(node)
+type ParseSource struct {
+	tokens  []sTokens.Token
+	current int
+}
+
+func New(tokens []sTokens.Token) ParseSource {
+	return ParseSource{
+		tokens:  tokens,
+		current: 0,
+	}
+}
+
+func (s *ParseSource) parsePrefix() (*ast.Node, *errors.SyntaxError) {
+	token := s.tokens[s.current]
+	switch token.Type {
+	case sTokens.IDENTIFIER, sTokens.NUMBER:
+		return &ast.Node{Token: token, Type: ast.Default}, nil
+	default:
+		return nil, &errors.SyntaxError{Message: "Unexpected token: parsing prefix", Line: token.Line, Char: token.Char}
+	}
+}
+
+func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.SyntaxError) {
+	left, err := s.parsePrefix()
+	if err != nil {
+		return nil, err
+	}
+	for s.tokens[s.current+1].Type != sTokens.SEMICOLON && precedence < sTokens.Priorities[s.tokens[s.current+1].Type] {
+		s.current++
+		token := s.tokens[s.current]
+		nextLeft := &ast.Node{Left: left, Token: token, Type: ast.Expression}
+		prec := sTokens.Priorities[token.Type]
+		s.current++
+		right, err := s.parseExpression(prec)
 		if err != nil {
 			return nil, err
 		}
-		if t.Type == sTokens.SEMICOLON {
-			*tokens = (*tokens)[i+1:]
+		nextLeft.Right = right
+		left = nextLeft
+	}
+
+	return left, nil
+}
+
+func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
+	trees := []*ast.AST{}
+
+	sourceSize := len(s.tokens) - 1
+	scope := 0
+	scopeStarts := []sTokens.Token{}
+
+	for s.current < sourceSize {
+		tree := ast.NewAST()
+		t := s.tokens[s.current]
+		switch t.Type {
+		case sTokens.LEFT_BRACE:
+			scopeStarts = append(scopeStarts, t)
+			scope++
+			s.current++
+		case sTokens.RIGHT_BRACE:
+			if scope == 0 {
+				return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected RIGHT_BRACE", Line: t.Line, Char: t.Char}
+			}
+			scope--
+			scopeStarts = scopeStarts[:scope]
+			s.current++
+		case sTokens.IDENTIFIER:
+			assignment_op := s.tokens[s.current+1]
+			if assignment_op.Type != sTokens.EQUAL && assignment_op.Type != sTokens.COLON_EQUAL {
+				return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected token: expecting = or :=", Line: assignment_op.Line, Char: assignment_op.Char}
+			}
+			s.current += 2
+			expression, err := s.parseExpression(sTokens.Priorities[sTokens.EOF])
+			if err != nil {
+				return []*ast.AST{}, err
+			}
+			tree.Root = &ast.Node{Token: assignment_op, Type: ast.Statement}
+			tree.Root.Left = &ast.Node{Token: t, Type: ast.Default}
+			tree.Root.Right = expression
+			trees = append(trees, &tree)
+			s.current += 2
+		case sTokens.EOF:
+			if scope > 0 {
+				brace := scopeStarts[0]
+				return []*ast.AST{}, &errors.SyntaxError{Message: "Scope not closed", Line: brace.Line, Char: brace.Char}
+			}
 			break
+		default:
+			return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected token: not a statement start", Line: t.Line, Char: t.Char}
 		}
 	}
-	tree.Rearrange()
-	return &tree, nil
+
+	return trees, nil
 }

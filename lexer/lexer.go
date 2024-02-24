@@ -12,12 +12,15 @@ var singleChars = map[byte]tokens.TokenType{
 	'/': tokens.SLASH,
 	'=': tokens.EQUAL,
 	';': tokens.SEMICOLON,
+	'{': tokens.LEFT_BRACE,
+	'}': tokens.RIGHT_BRACE,
+	'(': tokens.LEFT_PAREN,
+	')': tokens.RIGHT_PAREN,
 }
 
 func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 	result := []tokens.Token{}
 	errs := []errors.SyntaxError{}
-	parens := []rune{}
 	start := 0
 	lineStart := 0
 	sourceSize := len(source)
@@ -50,22 +53,6 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			result = append(result, token)
 			errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line + 1, Char: start - lineStart + 1})
 			start++
-		case '{':
-			parens = append(parens, '{')
-			token := tokens.NewToken(tokens.LEFT_BRACE, "", line, start-lineStart+1)
-			result = append(result, token)
-			start++
-		case '}':
-			token := tokens.NewToken(tokens.RIGHT_BRACE, "", line, start-lineStart+1)
-			result = append(result, token)
-			start++
-			if len(parens) == 0 {
-				errs = append(errs, errors.SyntaxError{Message: "Unexpected {", Line: line + 1, Char: start - lineStart + 1})
-			} else if parens[len(parens)-1] != '{' {
-				errs = append(errs, errors.SyntaxError{Message: "Unexpected {: expected something else lmao", Line: line + 1, Char: start - lineStart + 1})
-			} else {
-				parens = parens[:len(parens)-1]
-			}
 		default:
 			if isDigit(c) {
 				token, newStart := readNumber(&source, line, start, lineStart)
@@ -83,9 +70,7 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			}
 		}
 	}
-	for range parens {
-		errs = append(errs, errors.SyntaxError{Message: "Expected }", Line: line + 1, Char: start})
-	}
+	result = append(result, tokens.NewToken(tokens.EOF, "", line, 0))
 	return result, errs
 }
 

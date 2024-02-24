@@ -2,7 +2,6 @@ package ast
 
 import (
 	"fmt"
-	"simpl/errors"
 	"simpl/tokens"
 )
 
@@ -19,83 +18,16 @@ type Node struct {
 	Type  NodeType
 	Left  *Node
 	Right *Node
+	Level int
 }
 
 type AST struct {
 	Scope      int
 	Root       *Node
-	prevParent *Node
-	prev       *Node
 }
 
 func NewAST() AST {
 	return AST{}
-}
-
-func (t *AST) Insert(node *Node) *errors.SyntaxError {
-	var err *errors.SyntaxError
-	switch node.Token.Type {
-	case tokens.LEFT_BRACE, tokens.RIGHT_BRACE:
-		return nil
-	case tokens.SEMICOLON:
-		if t.Root == nil || t.Root.Type != Statement || t.prev.Type != Default {
-			return &errors.SyntaxError{Message: "Unexpected ;", Line: node.Token.Line, Char: node.Token.Char}
-		}
-	case tokens.COLON_EQUAL, tokens.EQUAL:
-		if t.Root == nil || t.prevParent != nil || NodeType(t.prev.Token.Type) != NodeType(tokens.IDENTIFIER) {
-			return &errors.SyntaxError{Message: "Unexpected assignment", Line: node.Token.Line, Char: node.Token.Char}
-		}
-		node.Left = t.prev
-	case tokens.PLUS, tokens.MINUS, tokens.STAR, tokens.SLASH:
-		if t.Root == nil || t.Root.Type != Statement || t.prev.Type != Default {
-			return &errors.SyntaxError{Message: "Unexpected operator", Line: node.Token.Line, Char: node.Token.Char}
-		}
-		node.Left = t.prev
-		t.prevParent.Right = node
-	case tokens.IDENTIFIER:
-		if t.Root != nil && t.prev.Type == Default {
-			return &errors.SyntaxError{Message: "Unexpected identifier", Line: node.Token.Line, Char: node.Token.Char}
-		}
-		if t.prev != nil {
-			t.prev.Right = node
-		}
-	case tokens.NUMBER:
-		if t.Root == nil || t.prev.Type == Default {
-			return &errors.SyntaxError{Message: "Unexpected number", Line: node.Token.Line, Char: node.Token.Char}
-		}
-		t.prev.Right = node
-	}
-	if t.Root == nil || t.Root.Type != Statement {
-		t.Root = node
-	}
-	t.prevParent = t.prev
-	t.prev = node
-	return err
-}
-
-func (t *AST) Rearrange() {
-	stack := []*Node{t.Root}
-	stackSize := 1
-	for {
-		node := stack[stackSize-1]
-		if node.Right == nil {
-			break
-		}
-		stack = append(stack, node.Right)
-		stackSize++
-	}
-	for i := stackSize - 1; i > 1; i-- {
-		node := stack[i]
-		parent := stack[i-1]
-        nodePriority := tokens.Priorities[node.Token.Type]
-        parentPriority := tokens.Priorities[parent.Token.Type]
-		if nodePriority != 0 && nodePriority < parentPriority {
-			parentParent := stack[i-2]
-			node.Left, node.Right, parent.Right = node.Right, parent, node.Left
-			parentParent.Right = node
-			stack[i], stack[i-1] = stack[i-1], stack[i]
-		}
-	}
 }
 
 func (t *AST) Traverse() {

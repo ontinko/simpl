@@ -18,8 +18,11 @@ const (
 
 	LEFT_BRACE
 	RIGHT_BRACE
+	LEFT_PAREN
+	RIGHT_PAREN
 
 	UNPERMITTED
+	EOF
 )
 
 var Representations map[TokenType]string = map[TokenType]string{
@@ -32,13 +35,19 @@ var Representations map[TokenType]string = map[TokenType]string{
 	SEMICOLON:   "SEMICOLON: ;",
 	LEFT_BRACE:  "LEFT_BRACE: {",
 	RIGHT_BRACE: "RIGHT_BRACE: }",
+	LEFT_PAREN:  "LEFT_PAREN: (",
+	RIGHT_PAREN: "RIGHT_PAREN: )",
+    EOF: "EOF",
 }
 
 var Priorities map[TokenType]int = map[TokenType]int{
-    PLUS: 1,
-    MINUS: 1,
-    STAR: 2,
-    SLASH: 2,
+	PLUS:  2,
+	MINUS: 2,
+	STAR:  3,
+	SLASH: 3,
+    NUMBER: 1,
+    IDENTIFIER: 1,
+    EOF: -1,
 }
 
 type Token struct {

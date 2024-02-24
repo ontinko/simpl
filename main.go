@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"simpl/ast"
 	"simpl/intpr"
 	"simpl/lexer"
 	"simpl/parser"
@@ -29,21 +28,18 @@ func main() {
 	}
 	memory := intpr.NewMemory()
 
-	logic := []*ast.AST{}
-	scope := 0
-	for len(tokens) != 0 {
-		tree, astErr := parser.Parse(&tokens, &scope)
-		if astErr != nil {
-			astErr.Print()
-			break
-		}
-		logic = append(logic, tree)
+    parseSource := parser.New(tokens)
+	logic, error := parseSource.Parse()
+	if error != nil {
+		error.Print()
+		os.Exit(64)
+		return
 	}
 	for _, tree := range logic {
 		intprErr := intpr.Run(memory, tree)
 		if intprErr != nil {
 			intprErr.Print()
-			break
+			os.Exit(64)
 		}
 	}
 	fmt.Println("Results:")
