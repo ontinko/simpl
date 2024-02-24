@@ -40,11 +40,13 @@ var Representations map[TokenType]string = map[TokenType]string{
     EOF: "EOF",
 }
 
-var Priorities map[TokenType]int = map[TokenType]int{
-	PLUS:  2,
-	MINUS: 2,
-	STAR:  3,
-	SLASH: 3,
+var Precedences map[TokenType]int = map[TokenType]int{
+	PLUS:  3,
+	MINUS: 3,
+	STAR:  4,
+	SLASH: 4,
+    EQUAL: 2,
+    COLON_EQUAL: 2,
     NUMBER: 1,
     IDENTIFIER: 1,
     EOF: -1,

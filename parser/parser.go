@@ -18,13 +18,30 @@ func New(tokens []sTokens.Token) ParseSource {
 	}
 }
 
+func (s *ParseSource) parseParens() (*ast.Node, *errors.SyntaxError) {
+	s.current++
+	node, err := s.parseExpression(sTokens.Precedences[0])
+	if err != nil {
+		return nil, err
+	}
+	nextToken := s.tokens[s.current+1]
+	if s.tokens[s.current+1].Type != sTokens.RIGHT_PAREN {
+		return nil, &errors.SyntaxError{Message: "Expected RIGHT_PAREN, got something else", Line: nextToken.Line, Char: nextToken.Char}
+	}
+
+	s.current++
+	return node, nil
+}
+
 func (s *ParseSource) parsePrefix() (*ast.Node, *errors.SyntaxError) {
 	token := s.tokens[s.current]
 	switch token.Type {
 	case sTokens.IDENTIFIER, sTokens.NUMBER:
 		return &ast.Node{Token: token, Type: ast.Default}, nil
+	case sTokens.LEFT_PAREN:
+		return s.parseParens()
 	default:
-		return nil, &errors.SyntaxError{Message: "Unexpected token: parsing prefix", Line: token.Line, Char: token.Char}
+		return nil, &errors.SyntaxError{Message: "Unexpected token", Line: token.Line, Char: token.Char}
 	}
 }
 
@@ -33,11 +50,11 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Syntax
 	if err != nil {
 		return nil, err
 	}
-	for s.tokens[s.current+1].Type != sTokens.SEMICOLON && precedence < sTokens.Priorities[s.tokens[s.current+1].Type] {
+	for s.tokens[s.current+1].Type != sTokens.SEMICOLON && precedence < sTokens.Precedences[s.tokens[s.current+1].Type] {
 		s.current++
 		token := s.tokens[s.current]
 		nextLeft := &ast.Node{Left: left, Token: token, Type: ast.Expression}
-		prec := sTokens.Priorities[token.Type]
+		prec := sTokens.Precedences[token.Type]
 		s.current++
 		right, err := s.parseExpression(prec)
 		if err != nil {
@@ -73,18 +90,11 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
 			scopeStarts = scopeStarts[:scope]
 			s.current++
 		case sTokens.IDENTIFIER:
-			assignment_op := s.tokens[s.current+1]
-			if assignment_op.Type != sTokens.EQUAL && assignment_op.Type != sTokens.COLON_EQUAL {
-				return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected token: expecting = or :=", Line: assignment_op.Line, Char: assignment_op.Char}
-			}
-			s.current += 2
-			expression, err := s.parseExpression(sTokens.Priorities[sTokens.EOF])
+			expression, err := s.parseExpression(sTokens.Precedences[sTokens.EOF])
 			if err != nil {
 				return []*ast.AST{}, err
 			}
-			tree.Root = &ast.Node{Token: assignment_op, Type: ast.Statement}
-			tree.Root.Left = &ast.Node{Token: t, Type: ast.Default}
-			tree.Root.Right = expression
+			tree.Root = expression
 			trees = append(trees, &tree)
 			s.current += 2
 		case sTokens.EOF:
