@@ -42,8 +42,7 @@ func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 	case sTokens.LEFT_PAREN:
 		return s.parseParens()
 	default:
-		tokenView := sTokens.Representations[token.Type]
-		return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", tokenView), Token: token, Type: errors.SyntaxError}
+		return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 	}
 }
 
@@ -76,6 +75,10 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 	return left, nil
 }
 
+func (s *ParseSource) UnexpectedError(token sTokens.Token) *errors.Error {
+	return &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
+}
+
 func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 	trees := []*ast.AST{}
 
@@ -93,8 +96,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			s.current++
 		case sTokens.RIGHT_BRACE:
 			if scope == 0 {
-				tokenView := sTokens.Representations[sTokens.RIGHT_BRACE]
-				return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s", tokenView), Token: t, Type: errors.SyntaxError}
+				return []*ast.AST{}, s.UnexpectedError(t)
 			}
 			scope--
 			scopeStarts = scopeStarts[:scope]
@@ -102,7 +104,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 		case sTokens.IDENTIFIER:
 			assignment := s.tokens[s.current+1]
 			if assignment.Type != sTokens.COLON_EQUAL && assignment.Type != sTokens.EQUAL {
-				return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s", assignment.View()), Token: assignment, Type: errors.SyntaxError}
+				return []*ast.AST{}, s.UnexpectedError(assignment)
 			}
 			tree.Scope = scope
 			tree.Root = &ast.Node{Token: assignment, Type: ast.Statement}
@@ -122,8 +124,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			}
 			break
 		default:
-			tokenView := sTokens.Representations[t.Type]
-			return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s: not a statement start", tokenView), Token: t, Type: errors.SyntaxError}
+			return []*ast.AST{}, s.UnexpectedError(t)
 		}
 	}
 
