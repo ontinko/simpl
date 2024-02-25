@@ -28,7 +28,4 @@ func (e *Error) Print() {
 		errorType = "runtime error"
 	}
 	fmt.Printf("%s:%d:%d: %s: %s\n", token.Filename, token.Line, token.Char, errorType, e.Message)
-	if len(token.Value) != 0 {
-		fmt.Printf("    %s\n----------------\n", token.Value)
-	}
 }
