@@ -55,7 +55,14 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 	for s.tokens[s.current+1].Type != sTokens.SEMICOLON && precedence < sTokens.Precedences[s.tokens[s.current+1].Type] {
 		s.current++
 		token := s.tokens[s.current]
-		nextLeft := &ast.Node{Left: left, Token: token, Type: ast.Expression}
+		var nextLeft *ast.Node
+		switch token.Type {
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS:
+			nextLeft = &ast.Node{Token: token, Type: ast.Expression}
+		default:
+			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
+		}
+		nextLeft.Left = left
 		prec := sTokens.Precedences[token.Type]
 		s.current++
 		right, err := s.parseExpression(prec)
@@ -93,12 +100,19 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			scopeStarts = scopeStarts[:scope]
 			s.current++
 		case sTokens.IDENTIFIER:
-			expression, err := s.parseExpression(sTokens.Precedences[sTokens.EOF])
+			assignment := s.tokens[s.current+1]
+			if assignment.Type != sTokens.COLON_EQUAL && assignment.Type != sTokens.EQUAL {
+				return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s", assignment.View()), Token: assignment, Type: errors.SyntaxError}
+			}
+			tree.Scope = scope
+			tree.Root = &ast.Node{Token: assignment, Type: ast.Statement}
+			tree.Root.Left = &ast.Node{Token: t, Type: ast.Default}
+			s.current += 2
+			right, err := s.parseExpression(sTokens.Precedences[sTokens.EOF])
 			if err != nil {
 				return []*ast.AST{}, err
 			}
-			tree.Root = expression
-			tree.Scope = scope
+			tree.Root.Right = right
 			trees = append(trees, &tree)
 			s.current += 2
 		case sTokens.EOF:

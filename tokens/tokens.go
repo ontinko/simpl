@@ -1,7 +1,5 @@
 package tokens
 
-import "fmt"
-
 type TokenType int
 
 const (
@@ -41,15 +39,13 @@ var Representations map[TokenType]string = map[TokenType]string{
 }
 
 var Precedences map[TokenType]int = map[TokenType]int{
-	PLUS:        3,
-	MINUS:       3,
-	STAR:        4,
-	SLASH:       4,
-	EQUAL:       2,
-	COLON_EQUAL: 2,
-	NUMBER:      1,
-	IDENTIFIER:  1,
-	EOF:         -1,
+	PLUS:       2,
+	MINUS:      2,
+	STAR:       3,
+	SLASH:      3,
+	NUMBER:     1,
+	IDENTIFIER: 1,
+	EOF:        -1,
 }
 
 type Token struct {
@@ -64,18 +60,10 @@ func NewToken(tType TokenType, value string, filename string, line, char int) To
 	return Token{tType, value, line, char, filename}
 }
 
-func (t *Token) Print() {
+func (t *Token) View() string {
 	value, found := Representations[t.Type]
 	if found {
-		fmt.Println(value)
-		return
+		return value
 	}
-	switch t.Type {
-	case IDENTIFIER:
-		fmt.Printf("IDENTIFIER: %s\n", t.Value)
-	case NUMBER:
-		fmt.Printf("NUMBER: %s\n", t.Value)
-	default:
-		fmt.Printf("UNPERMITTED: %s\n", t.Value)
-	}
+	return t.Value
 }

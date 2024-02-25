@@ -45,7 +45,7 @@ func (t *AST) Traverse() {
 		if len(stack) > 0 {
 			node = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			node.Token.Print()
+			fmt.Println(node.Token.View())
 			node = node.Right
 			continue
 		}
