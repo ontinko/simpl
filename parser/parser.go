@@ -75,7 +75,7 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 	return left, nil
 }
 
-func (s *ParseSource) UnexpectedError(token sTokens.Token) *errors.Error {
+func (s *ParseSource) unexpectedError(token sTokens.Token) *errors.Error {
 	return &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 }
 
@@ -96,7 +96,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			s.current++
 		case sTokens.RIGHT_BRACE:
 			if scope == 0 {
-				return []*ast.AST{}, s.UnexpectedError(t)
+				return []*ast.AST{}, s.unexpectedError(t)
 			}
 			scope--
 			scopeStarts = scopeStarts[:scope]
@@ -104,7 +104,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 		case sTokens.IDENTIFIER:
 			assignment := s.tokens[s.current+1]
 			if assignment.Type != sTokens.COLON_EQUAL && assignment.Type != sTokens.EQUAL {
-				return []*ast.AST{}, s.UnexpectedError(assignment)
+				return []*ast.AST{}, s.unexpectedError(assignment)
 			}
 			tree.Scope = scope
 			tree.Root = &ast.Node{Token: assignment, Type: ast.Statement}
@@ -124,7 +124,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			}
 			break
 		default:
-			return []*ast.AST{}, s.UnexpectedError(t)
+			return []*ast.AST{}, s.unexpectedError(t)
 		}
 	}
 
