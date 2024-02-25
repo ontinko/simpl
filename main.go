@@ -14,12 +14,13 @@ func main() {
 		fmt.Println("Usage: simpl [script]")
 		os.Exit(64)
 	}
-	source, err := os.ReadFile(args[0])
+	filename := args[0]
+	source, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Println("File not found")
 		os.Exit(64)
 	}
-	tokens, errs := lexer.Tokenize(string(source), 1)
+	tokens, errs := lexer.Tokenize(string(source), filename, 1)
 	if len(errs) > 0 {
 		for _, e := range errs {
 			e.Print()

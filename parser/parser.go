@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"simpl/ast"
 	"simpl/errors"
 	sTokens "simpl/tokens"
@@ -18,22 +19,22 @@ func New(tokens []sTokens.Token) ParseSource {
 	}
 }
 
-func (s *ParseSource) parseParens() (*ast.Node, *errors.SyntaxError) {
+func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
 	s.current++
-	node, err := s.parseExpression(sTokens.Precedences[0])
+	node, err := s.parseExpression(0)
 	if err != nil {
 		return nil, err
 	}
 	nextToken := s.tokens[s.current+1]
 	if s.tokens[s.current+1].Type != sTokens.RIGHT_PAREN {
-		return nil, &errors.SyntaxError{Message: "Expected RIGHT_PAREN, got something else", Line: nextToken.Line, Char: nextToken.Char}
+		expected, got := sTokens.Representations[sTokens.RIGHT_PAREN], sTokens.Representations[nextToken.Type]
+		return nil, &errors.Error{Message: fmt.Sprintf("Expected %s, got %s", expected, got), Token: nextToken, Type: errors.SyntaxError}
 	}
-
 	s.current++
 	return node, nil
 }
 
-func (s *ParseSource) parsePrefix() (*ast.Node, *errors.SyntaxError) {
+func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 	token := s.tokens[s.current]
 	switch token.Type {
 	case sTokens.IDENTIFIER, sTokens.NUMBER:
@@ -41,11 +42,12 @@ func (s *ParseSource) parsePrefix() (*ast.Node, *errors.SyntaxError) {
 	case sTokens.LEFT_PAREN:
 		return s.parseParens()
 	default:
-		return nil, &errors.SyntaxError{Message: "Unexpected token", Line: token.Line, Char: token.Char}
+		tokenView := sTokens.Representations[token.Type]
+		return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", tokenView), Token: token, Type: errors.SyntaxError}
 	}
 }
 
-func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.SyntaxError) {
+func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error) {
 	left, err := s.parsePrefix()
 	if err != nil {
 		return nil, err
@@ -67,7 +69,7 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Syntax
 	return left, nil
 }
 
-func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
+func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 	trees := []*ast.AST{}
 
 	sourceSize := len(s.tokens) - 1
@@ -84,7 +86,8 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
 			s.current++
 		case sTokens.RIGHT_BRACE:
 			if scope == 0 {
-				return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected RIGHT_BRACE", Line: t.Line, Char: t.Char}
+				tokenView := sTokens.Representations[sTokens.RIGHT_BRACE]
+				return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s", tokenView), Token: t, Type: errors.SyntaxError}
 			}
 			scope--
 			scopeStarts = scopeStarts[:scope]
@@ -95,17 +98,18 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.SyntaxError) {
 				return []*ast.AST{}, err
 			}
 			tree.Root = expression
-            tree.Scope = scope
+			tree.Scope = scope
 			trees = append(trees, &tree)
 			s.current += 2
 		case sTokens.EOF:
 			if scope > 0 {
 				brace := scopeStarts[0]
-				return []*ast.AST{}, &errors.SyntaxError{Message: "Scope not closed", Line: brace.Line, Char: brace.Char}
+				return []*ast.AST{}, &errors.Error{Message: "Scope not closed", Token: brace, Type: errors.SyntaxError}
 			}
 			break
 		default:
-			return []*ast.AST{}, &errors.SyntaxError{Message: "Unexpected token: not a statement start", Line: t.Line, Char: t.Char}
+			tokenView := sTokens.Representations[t.Type]
+			return []*ast.AST{}, &errors.Error{Message: fmt.Sprintf("unexpected %s: not a statement start", tokenView), Token: t, Type: errors.SyntaxError}
 		}
 	}
 

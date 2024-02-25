@@ -18,16 +18,16 @@ var singleChars = map[byte]tokens.TokenType{
 	')': tokens.RIGHT_PAREN,
 }
 
-func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
+func Tokenize(source string, filename string, line int) ([]tokens.Token, []errors.Error) {
 	result := []tokens.Token{}
-	errs := []errors.SyntaxError{}
+	errs := []errors.Error{}
 	start := 0
 	lineStart := 0
 	sourceSize := len(source)
 	for start < sourceSize {
 		c := source[start]
 		if singleChars[c] != 0 {
-			token := tokens.NewToken(singleChars[c], "", line, start-lineStart+1)
+			token := tokens.NewToken(singleChars[c], "", filename, line, start-lineStart+1)
 			result = append(result, token)
 			start++
 			continue
@@ -44,33 +44,33 @@ func Tokenize(source string, line int) ([]tokens.Token, []errors.SyntaxError) {
 			start = newStart
 		case ':':
 			if peek(&source, start+1) == '=' {
-				token := tokens.NewToken(tokens.COLON_EQUAL, "", line, start-lineStart+1)
+				token := tokens.NewToken(tokens.COLON_EQUAL, "", filename, line, start-lineStart+1)
 				result = append(result, token)
 				start += 2
 				continue
 			}
-			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start-lineStart+1)
+			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
 			result = append(result, token)
-			errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line + 1, Char: start - lineStart + 1})
+			errs = append(errs, errors.Error{Message: "Unpermitted character", Token: token, Type: errors.SyntaxError})
 			start++
 		default:
 			if isDigit(c) {
-				token, newStart := readNumber(&source, line, start, lineStart)
+				token, newStart := readNumber(&source, filename, line, start, lineStart)
 				result = append(result, token)
 				start = newStart
 			} else if isAlpha(c) {
-				token, newStart := readIdentifier(&source, line, start, lineStart)
+				token, newStart := readIdentifier(&source, filename, line, start, lineStart)
 				result = append(result, token)
 				start = newStart
 			} else {
-				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], line, start-lineStart+1)
-				errs = append(errs, errors.SyntaxError{Message: "Unpermitted character", Line: line + 1, Char: start - lineStart + 1})
+				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
+				errs = append(errs, errors.Error{Message: "Unpermitted character", Token: token, Type: errors.SyntaxError})
 				result = append(result, token)
 				start++
 			}
 		}
 	}
-	result = append(result, tokens.NewToken(tokens.EOF, "", line, 0))
+	result = append(result, tokens.NewToken(tokens.EOF, "", filename, line, 0))
 	return result, errs
 }
 
@@ -101,16 +101,16 @@ func isAlpha(c byte) bool {
 		c == '_'
 }
 
-func readNumber(source *string, line, start int, lineStart int) (tokens.Token, int) {
+func readNumber(source *string, filename string, line, start int, lineStart int) (tokens.Token, int) {
 	end := start + 1
 	for isDigit(peek(source, end)) {
 		end++
 	}
-	token := tokens.NewToken(tokens.NUMBER, (*source)[start:end], line, start-lineStart+1)
+	token := tokens.NewToken(tokens.NUMBER, (*source)[start:end], filename, line, start-lineStart+1)
 	return token, end
 }
 
-func readIdentifier(source *string, line, start int, lineStart int) (tokens.Token, int) {
+func readIdentifier(source *string, filename string, line, start int, lineStart int) (tokens.Token, int) {
 	end := start + 1
 	for {
 		c := (*source)[end]
@@ -119,6 +119,6 @@ func readIdentifier(source *string, line, start int, lineStart int) (tokens.Toke
 		}
 		end++
 	}
-	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], line+1, start-lineStart+1)
+	token := tokens.NewToken(tokens.IDENTIFIER, (*source)[start:end], filename, line+1, start-lineStart+1)
 	return token, end
 }

@@ -1,23 +1,34 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	"simpl/tokens"
+)
 
-type RuntimeError struct {
+type ErrorType int
+
+const (
+	SyntaxError ErrorType = iota + 1
+	RuntimeError
+)
+
+type Error struct {
+	Type    ErrorType
 	Message string
-	Line    int
-	Char    int
+	Token   tokens.Token
 }
 
-type SyntaxError struct {
-	Message string
-	Line    int
-	Char    int
-}
-
-func (e *RuntimeError) Print() {
-	fmt.Printf("Runtime error: %d:%d %s\n", e.Line, e.Char, e.Message)
-}
-
-func (e *SyntaxError) Print() {
-	fmt.Printf("Syntax error: %d:%d %s\n", e.Line, e.Char, e.Message)
+func (e *Error) Print() {
+	token := e.Token
+	var errorType string
+	switch e.Type {
+	case SyntaxError:
+		errorType = "syntax error"
+	default:
+		errorType = "runtime error"
+	}
+	fmt.Printf("%s:%d:%d: %s: %s\n", token.Filename, token.Line, token.Char, errorType, e.Message)
+	if len(token.Value) != 0 {
+		fmt.Printf("    %s\n----------------\n", token.Value)
+	}
 }

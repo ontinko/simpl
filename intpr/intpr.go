@@ -13,27 +13,27 @@ func NewMemory() *Memory {
 	return &Memory{map[string]int{}}
 }
 
-func (m *Memory) Get(token tokens.Token) (int, *errors.RuntimeError) {
+func (m *Memory) Get(token tokens.Token) (int, *errors.Error) {
 	for i := len(*m) - 1; i >= 0; i-- {
 		val, found := (*m)[i][token.Value]
 		if found {
 			return val, nil
 		}
 	}
-	return 0, &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
+	return 0, &errors.Error{Message: "Undefined variable", Token: token, Type: errors.RuntimeError}
 }
 
-func (m *Memory) Set(token tokens.Token, opToken tokens.Token, value int) *errors.RuntimeError {
+func (m *Memory) Set(token tokens.Token, opToken tokens.Token, value int) *errors.Error {
 	name := token.Value
 	_, defined := (*m)[len(*m)-1][name]
 	if !defined {
 		(*m)[len(*m)-1][name] = value
 		return nil
 	}
-	return &errors.RuntimeError{Message: "Variable reassignment not allowed", Line: opToken.Line, Char: opToken.Char}
+	return &errors.Error{Message: "Variable reassignment not allowed", Token: token, Type: errors.RuntimeError}
 }
 
-func (m *Memory) Update(token tokens.Token, value int) *errors.RuntimeError {
+func (m *Memory) Update(token tokens.Token, value int) *errors.Error {
 	name := token.Value
 	for i := len(*m) - 1; i >= 0; i-- {
 		_, found := (*m)[i][name]
@@ -42,10 +42,10 @@ func (m *Memory) Update(token tokens.Token, value int) *errors.RuntimeError {
 			return nil
 		}
 	}
-	return &errors.RuntimeError{Message: "Undefined variable", Line: token.Line, Char: token.Char}
+	return &errors.Error{Message: "Undefined variable", Token: token, Type: errors.RuntimeError}
 }
 
-func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
+func Run(mem *Memory, tree *ast.AST) *errors.Error {
 	if tree.Scope < len(*mem)-1 {
 		*mem = (*mem)[:tree.Scope+1]
 	}
@@ -69,14 +69,14 @@ func Run(mem *Memory, tree *ast.AST) *errors.RuntimeError {
 	}
 }
 
-func eval(mem *Memory, node *ast.Node) (int, *errors.RuntimeError) {
+func eval(mem *Memory, node *ast.Node) (int, *errors.Error) {
 	if node.Type == ast.Default {
 		if node.Token.Type == tokens.IDENTIFIER {
 			return mem.Get(node.Token)
 		}
 		val, err := strconv.Atoi(node.Token.Value)
 		if err != nil {
-			return 0, &errors.RuntimeError{Message: "Not a number", Line: node.Token.Line, Char: node.Token.Char}
+			return 0, &errors.Error{Message: "Not a number", Token: node.Token, Type: errors.RuntimeError}
 		}
 		return val, nil
 	}
