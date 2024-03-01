@@ -11,8 +11,8 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 	types := []map[string]ast.DataType{}
 	errors := []*sErrors.Error{}
 
-	var setType func(node *ast.Node, scope int)
-	setType = func(node *ast.Node, scope int) {
+	var setType func(node *ast.Node)
+	setType = func(node *ast.Node) {
 		switch node.Token.Type {
 		case tokens.NUMBER:
 			node.DataType = ast.Number
@@ -27,10 +27,13 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 				}
 			}
 			errors = append(errors, &sErrors.Error{Message: "undefined variable", Type: sErrors.ReferenceError, Token: node.Token})
+		case tokens.BANG:
+			node.DataType = ast.Bool
+			setType(node.Left)
 		case tokens.PLUS, tokens.MINUS, tokens.STAR, tokens.SLASH:
 			node.DataType = ast.Number
-			setType(node.Left, scope)
-			setType(node.Right, scope)
+			setType(node.Left)
+			setType(node.Right)
 			if node.Left.DataType != ast.Number {
 				errors = append(errors, &sErrors.Error{Message: "invalid operation", Type: sErrors.TypeError, Token: node.Token})
 			}
@@ -39,7 +42,7 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 			}
 		case tokens.COLON_EQUAL:
 			_, found := types[len(types)-1][node.Left.Token.Value]
-			setType(node.Right, scope)
+			setType(node.Right)
 			if !found {
 				node.Left.DataType = node.Right.DataType
 				types[len(types)-1][node.Left.Token.Value] = node.Left.DataType
@@ -59,7 +62,7 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 				errors = append(errors, &sErrors.Error{Message: "undefined variable", Type: sErrors.ReferenceError, Token: node.Left.Token})
 			}
 			node.Left.DataType = dType
-			setType(node.Right, scope)
+			setType(node.Right)
 			if dType != 0 && dType != node.Right.DataType {
 				errors = append(errors, &sErrors.Error{Message: "trying to assign a different type", Type: sErrors.TypeError, Token: node.Token})
 			}
@@ -74,7 +77,7 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 		if t.Scope < len(types)-1 {
 			types = types[:t.Scope+1]
 		}
-		setType(t.Root, t.Scope)
+		setType(t.Root)
 	}
 	return errors
 }

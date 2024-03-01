@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	execute := true
 	args := os.Args[1:]
 	if len(args) != 1 {
 		fmt.Println("Usage: simpl [script]")
@@ -46,17 +47,24 @@ func main() {
 		}
 		os.Exit(64)
 	}
-	fmt.Println("Executing")
-	start := time.Now()
-	for _, tree := range logic {
-		intprErr := intpr.Run(memory, tree)
-		if intprErr != nil {
-			intprErr.Print()
-			os.Exit(64)
+	if execute {
+		fmt.Println("Executing")
+		start := time.Now()
+		for _, tree := range logic {
+			intprErr := intpr.Run(memory, tree)
+			if intprErr != nil {
+				intprErr.Print()
+				os.Exit(64)
+			}
 		}
+		elapsed := time.Since(start)
+		fmt.Println("Elapsed:", elapsed)
+		fmt.Println("Results:")
+		memory.Print()
+	} else {
+		for _, tree := range logic {
+            tree.Root.Visualize()
+		}
+
 	}
-	elapsed := time.Since(start)
-	fmt.Println("Elapsed:", elapsed)
-	fmt.Println("Results:")
-	memory.Print()
 }

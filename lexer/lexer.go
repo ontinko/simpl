@@ -16,6 +16,7 @@ var singleChars = map[byte]tokens.TokenType{
 	'}': tokens.RIGHT_BRACE,
 	'(': tokens.LEFT_PAREN,
 	')': tokens.RIGHT_PAREN,
+	'!': tokens.BANG,
 }
 
 func Tokenize(source string, filename string, line int) ([]tokens.Token, []errors.Error) {

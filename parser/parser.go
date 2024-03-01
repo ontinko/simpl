@@ -37,6 +37,16 @@ func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
 func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 	token := s.tokens[s.current]
 	switch token.Type {
+	case sTokens.BANG:
+		node := &ast.Node{Token: token, Type: ast.Expression}
+		s.current++
+		expression, err := s.parsePrefix()
+		if err != nil {
+			return nil, err
+		}
+		node.Left = expression
+		return node, nil
+
 	case sTokens.IDENTIFIER, sTokens.NUMBER, sTokens.TRUE, sTokens.FALSE:
 		return &ast.Node{Token: token, Type: ast.Value}, nil
 	case sTokens.LEFT_PAREN:

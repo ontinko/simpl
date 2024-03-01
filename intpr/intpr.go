@@ -127,7 +127,16 @@ func Run(mem *Memory, tree *ast.AST) *errors.Error {
 }
 
 func evalBool(mem *Memory, node *ast.Node) (bool, *errors.Error) {
-	return node.Token.Type == tokens.TRUE, nil
+	switch node.Token.Type {
+	case tokens.BANG:
+		val, err := evalBool(mem, node.Left)
+		if err != nil {
+			return false, err
+		}
+		return !val, nil
+	default:
+		return node.Token.Type == tokens.TRUE, nil
+	}
 }
 
 func evalNum(mem *Memory, node *ast.Node) (int, *errors.Error) {
