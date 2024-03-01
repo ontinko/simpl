@@ -27,12 +27,6 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 	sourceSize := len(source)
 	for start < sourceSize {
 		c := source[start]
-		if singleChars[c] != 0 {
-			token := tokens.NewToken(singleChars[c], "", filename, line, start-lineStart+1)
-			result = append(result, token)
-			start++
-			continue
-		}
 		switch c {
 		case '\n':
 			line++
@@ -52,13 +46,37 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 			}
 			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
 			result = append(result, token)
-			errs = append(errs, errors.Error{Message: "Unpermitted character", Token: token, Type: errors.SyntaxError})
+			errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
 			start++
+		case '|':
+			if peek(&source, start+1) == '|' {
+				token := tokens.NewToken(tokens.OR, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			}
+			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
+			result = append(result, token)
+			errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
+		case '&':
+			if peek(&source, start+1) == '&' {
+				token := tokens.NewToken(tokens.AND, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			}
+			token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
+			result = append(result, token)
+			errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
 		default:
-			if isDigit(c) {
+			if c == '-' || isDigit(c) {
 				token, newStart := readNumber(&source, filename, line, start, lineStart)
 				result = append(result, token)
 				start = newStart
+			} else if singleChars[c] != 0 {
+				token := tokens.NewToken(singleChars[c], "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start++
 			} else if isAlpha(c) {
 				end := readAlphaNumeric(&source, start)
 				var token tokens.Token
@@ -74,7 +92,7 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 				start = end
 			} else {
 				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
-				errs = append(errs, errors.Error{Message: "Unpermitted character", Token: token, Type: errors.SyntaxError})
+				errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
 				result = append(result, token)
 				start++
 			}

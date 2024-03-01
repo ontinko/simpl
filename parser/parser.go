@@ -28,7 +28,7 @@ func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
 	nextToken := s.tokens[s.current+1]
 	if s.tokens[s.current+1].Type != sTokens.RIGHT_PAREN {
 		expected, got := sTokens.Representations[sTokens.RIGHT_PAREN], sTokens.Representations[nextToken.Type]
-		return nil, &errors.Error{Message: fmt.Sprintf("Expected %s, got %s", expected, got), Token: nextToken, Type: errors.SyntaxError}
+		return nil, &errors.Error{Message: fmt.Sprintf("expected %s, got %s", expected, got), Token: nextToken, Type: errors.SyntaxError}
 	}
 	s.current++
 	return node, nil
@@ -61,12 +61,18 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 	if err != nil {
 		return nil, err
 	}
-	for s.tokens[s.current+1].Type != sTokens.SEMICOLON && precedence < sTokens.Precedences[s.tokens[s.current+1].Type] {
+	for {
+		if s.tokens[s.current+1].Type == sTokens.EOF {
+			return nil, &errors.Error{Message: "expected ;", Token: s.tokens[s.current], Type: errors.SyntaxError}
+		}
+		if s.tokens[s.current+1].Type == sTokens.SEMICOLON || precedence >= sTokens.Precedences[s.tokens[s.current+1].Type] {
+			break
+		}
 		s.current++
 		token := s.tokens[s.current]
 		var nextLeft *ast.Node
 		switch token.Type {
-		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS:
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR:
 			nextLeft = &ast.Node{Token: token, Type: ast.Expression}
 		default:
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}

@@ -30,15 +30,19 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 		case tokens.BANG:
 			node.DataType = ast.Bool
 			setType(node.Left)
+		case tokens.OR, tokens.AND:
+			node.DataType = ast.Bool
+			setType(node.Left)
+			setType(node.Right)
+			if node.Left.DataType != ast.Bool || node.Right.DataType != ast.Bool {
+				errors = append(errors, &sErrors.Error{Message: "invalid operation", Type: sErrors.TypeError, Token: node.Token})
+			}
 		case tokens.PLUS, tokens.MINUS, tokens.STAR, tokens.SLASH:
 			node.DataType = ast.Number
 			setType(node.Left)
 			setType(node.Right)
-			if node.Left.DataType != ast.Number {
+			if node.Left.DataType != ast.Number || node.Right.DataType != ast.Number {
 				errors = append(errors, &sErrors.Error{Message: "invalid operation", Type: sErrors.TypeError, Token: node.Token})
-			}
-			if node.Right.DataType != ast.Number {
-				errors = append(errors, &sErrors.Error{Message: "expected number", Type: sErrors.TypeError, Token: node.Right.Token})
 			}
 		case tokens.COLON_EQUAL:
 			_, found := types[len(types)-1][node.Left.Token.Value]

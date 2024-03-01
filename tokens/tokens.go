@@ -18,6 +18,8 @@ const (
 	FALSE
 
 	BANG
+	OR
+	AND
 
 	LEFT_BRACE
 	RIGHT_BRACE
@@ -43,6 +45,8 @@ var Representations map[TokenType]string = map[TokenType]string{
 	BANG:        "!",
 	TRUE:        "true",
 	FALSE:       "false",
+	OR:          "OR",
+	AND:         "AND",
 	EOF:         "EOF",
 }
 
@@ -51,7 +55,9 @@ var Precedences map[TokenType]int = map[TokenType]int{
 	MINUS:      2,
 	STAR:       3,
 	SLASH:      3,
-	BANG:       4,
+	OR:         4,
+	AND:        5,
+	BANG:       6,
 	NUMBER:     1,
 	IDENTIFIER: 1,
 	TRUE:       1,

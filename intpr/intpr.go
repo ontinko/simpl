@@ -134,8 +134,30 @@ func evalBool(mem *Memory, node *ast.Node) (bool, *errors.Error) {
 			return false, err
 		}
 		return !val, nil
-	default:
+	case tokens.AND:
+		left, err := evalBool(mem, node.Left)
+		if err != nil {
+			return false, err
+		}
+		right, err := evalBool(mem, node.Right)
+		if err != nil {
+			return false, err
+		}
+		return left && right, nil
+	case tokens.OR:
+		left, err := evalBool(mem, node.Left)
+		if err != nil {
+			return false, err
+		}
+		right, err := evalBool(mem, node.Right)
+		if err != nil {
+			return false, err
+		}
+		return left || right, nil
+	case tokens.TRUE, tokens.FALSE:
 		return node.Token.Type == tokens.TRUE, nil
+	default:
+		return mem.getBool(node.Token), nil
 	}
 }
 

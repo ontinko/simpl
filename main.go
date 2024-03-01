@@ -63,8 +63,7 @@ func main() {
 		memory.Print()
 	} else {
 		for _, tree := range logic {
-            tree.Root.Visualize()
+			tree.Root.Visualize()
 		}
-
 	}
 }
