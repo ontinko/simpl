@@ -48,7 +48,6 @@ func main() {
 		os.Exit(64)
 	}
 	if execute {
-		fmt.Println("Executing")
 		start := time.Now()
 		for _, tree := range logic {
 			intprErr := intpr.Run(memory, tree)
