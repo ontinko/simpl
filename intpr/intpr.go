@@ -126,6 +126,8 @@ func Run(mem *Memory, tree *ast.AST) *errors.Error {
 	return nil
 }
 
+// god help us all
+
 func evalBool(mem *Memory, node *ast.Node) (bool, *errors.Error) {
 	switch node.Token.Type {
 	case tokens.BANG:
@@ -154,6 +156,34 @@ func evalBool(mem *Memory, node *ast.Node) (bool, *errors.Error) {
 			return false, err
 		}
 		return left || right, nil
+	case tokens.DOUBLE_EQUAL, tokens.NOT_EQUAL:
+		if node.Left.DataType == ast.Bool {
+			left, err := evalBool(mem, node.Left)
+			if err != nil {
+				return false, err
+			}
+			right, err := evalBool(mem, node.Right)
+			if err != nil {
+				return false, err
+			}
+			if node.Token.Type == tokens.DOUBLE_EQUAL {
+				return left == right, nil
+			}
+			return left != right, nil
+		} else {
+			left, err := evalNum(mem, node.Left)
+			if err != nil {
+				return false, err
+			}
+			right, err := evalNum(mem, node.Right)
+			if err != nil {
+				return false, err
+			}
+			if node.Token.Type == tokens.DOUBLE_EQUAL {
+				return left == right, nil
+			}
+			return left != right, nil
+		}
 	case tokens.TRUE, tokens.FALSE:
 		return node.Token.Type == tokens.TRUE, nil
 	default:

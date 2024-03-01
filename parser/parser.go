@@ -72,7 +72,7 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 		token := s.tokens[s.current]
 		var nextLeft *ast.Node
 		switch token.Type {
-		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR:
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL:
 			nextLeft = &ast.Node{Token: token, Type: ast.Expression}
 		default:
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}

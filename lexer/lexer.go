@@ -10,13 +10,11 @@ var singleChars = map[byte]tokens.TokenType{
 	'-': tokens.MINUS,
 	'*': tokens.STAR,
 	'/': tokens.SLASH,
-	'=': tokens.EQUAL,
 	';': tokens.SEMICOLON,
 	'{': tokens.LEFT_BRACE,
 	'}': tokens.RIGHT_BRACE,
 	'(': tokens.LEFT_PAREN,
 	')': tokens.RIGHT_PAREN,
-	'!': tokens.BANG,
 }
 
 func Tokenize(source string, filename string, line int) ([]tokens.Token, []errors.Error) {
@@ -48,6 +46,26 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 			result = append(result, token)
 			errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
 			start++
+		case '=':
+			var token tokens.Token
+			if peek(&source, start+1) == '=' {
+				token = tokens.NewToken(tokens.DOUBLE_EQUAL, "", filename, line, start-lineStart+1)
+				start += 2
+			} else {
+				token = tokens.NewToken(tokens.EQUAL, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
+		case '!':
+			var token tokens.Token
+			if peek(&source, start+1) == '=' {
+				token = tokens.NewToken(tokens.NOT_EQUAL, "", filename, line, start-lineStart+1)
+				start += 2
+			} else {
+				token = tokens.NewToken(tokens.BANG, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
 		case '|':
 			if peek(&source, start+1) == '|' {
 				token := tokens.NewToken(tokens.OR, "", filename, line, start-lineStart+1)

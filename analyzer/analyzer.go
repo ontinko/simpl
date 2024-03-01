@@ -37,6 +37,13 @@ func Prepare(trees []*ast.AST) []*sErrors.Error {
 			if node.Left.DataType != ast.Bool || node.Right.DataType != ast.Bool {
 				errors = append(errors, &sErrors.Error{Message: "invalid operation", Type: sErrors.TypeError, Token: node.Token})
 			}
+		case tokens.DOUBLE_EQUAL, tokens.NOT_EQUAL:
+			node.DataType = ast.Bool
+			setType(node.Left)
+			setType(node.Right)
+			if node.Left.DataType != node.Right.DataType {
+				errors = append(errors, &sErrors.Error{Message: "comparing values of different types", Type: sErrors.TypeError, Token: node.Token})
+			}
 		case tokens.PLUS, tokens.MINUS, tokens.STAR, tokens.SLASH:
 			node.DataType = ast.Number
 			setType(node.Left)
