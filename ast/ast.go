@@ -26,7 +26,6 @@ type Node struct {
 	DataType DataType
 	Left     *Node
 	Right    *Node
-	Level    int
 }
 
 type AST struct {

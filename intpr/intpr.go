@@ -89,8 +89,6 @@ func (m *Memory) Print() {
 	}
 }
 
-// Fix: variables don't update
-
 func Run(mem *Memory, tree *ast.AST) *errors.Error {
 	if tree.Scope < mem.maxScope {
 		mem.ints = mem.ints[:tree.Scope+1]
@@ -129,10 +127,7 @@ func Run(mem *Memory, tree *ast.AST) *errors.Error {
 }
 
 func evalBool(mem *Memory, node *ast.Node) (bool, *errors.Error) {
-	if node.Token.Type == tokens.TRUE {
-		return true, nil
-	}
-	return false, nil
+	return node.Token.Type == tokens.TRUE, nil
 }
 
 func evalNum(mem *Memory, node *ast.Node) (int, *errors.Error) {
