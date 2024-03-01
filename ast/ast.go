@@ -7,18 +7,26 @@ import (
 
 type NodeType int
 
+type DataType int
+
 const (
-	Default NodeType = iota
+	Value NodeType = iota
 	Expression
 	Statement
 )
 
+const (
+	Number DataType = iota + 1
+	Bool
+)
+
 type Node struct {
-	Token tokens.Token
-	Type  NodeType
-	Left  *Node
-	Right *Node
-	Level int
+	Token    tokens.Token
+	Type     NodeType
+	DataType DataType
+	Left     *Node
+	Right    *Node
+	Level    int
 }
 
 type AST struct {
@@ -28,6 +36,20 @@ type AST struct {
 
 func NewAST() AST {
 	return AST{}
+}
+
+func (n *Node) SetTypes() {
+	if n.Left == nil && n.Right == nil {
+		switch n.Token.Type {
+		case tokens.NUMBER:
+			n.DataType = Number
+		case tokens.TRUE, tokens.FALSE:
+			n.DataType = Number
+		}
+		return
+	}
+	switch n.Type {
+	}
 }
 
 func (t *AST) Traverse() {
@@ -45,7 +67,16 @@ func (t *AST) Traverse() {
 		if len(stack) > 0 {
 			node = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			fmt.Println(node.Token.View())
+			dataType := ""
+			switch node.DataType {
+			case Bool:
+				dataType = "bool"
+			case Number:
+				dataType = "int"
+			default:
+				dataType = "none"
+			}
+			fmt.Printf("%s:%s\n", node.Token.View(), dataType)
 			node = node.Right
 			continue
 		}
@@ -83,13 +114,22 @@ func (root *Node) Visualize() {
 			if n == nil {
 				fmt.Print(" ")
 			} else {
+				dataType := ""
+				switch n.DataType {
+				case Number:
+					dataType = "int"
+				case Bool:
+					dataType = "bool"
+				default:
+					dataType = "none"
+				}
 				val, found := tokens.Representations[n.Token.Type]
 				if found {
-					fmt.Print(val)
+					fmt.Printf("%s: %s", val, dataType)
 				} else if n.Token.Type == tokens.UNPERMITTED {
 					fmt.Printf("X: %s", n.Token.Value)
 				} else {
-					fmt.Print(n.Token.Value)
+					fmt.Printf("%s: %s", n.Token.Value, dataType)
 				}
 			}
 			for j := 0; j < tab; j++ {

@@ -37,8 +37,8 @@ func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
 func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 	token := s.tokens[s.current]
 	switch token.Type {
-	case sTokens.IDENTIFIER, sTokens.NUMBER:
-		return &ast.Node{Token: token, Type: ast.Default}, nil
+	case sTokens.IDENTIFIER, sTokens.NUMBER, sTokens.TRUE, sTokens.FALSE:
+		return &ast.Node{Token: token, Type: ast.Value}, nil
 	case sTokens.LEFT_PAREN:
 		return s.parseParens()
 	default:
@@ -108,7 +108,7 @@ func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
 			}
 			tree.Scope = scope
 			tree.Root = &ast.Node{Token: assignment, Type: ast.Statement}
-			tree.Root.Left = &ast.Node{Token: t, Type: ast.Default}
+			tree.Root.Left = &ast.Node{Token: t, Type: ast.Value}
 			s.current += 2
 			right, err := s.parseExpression(sTokens.Precedences[sTokens.EOF])
 			if err != nil {

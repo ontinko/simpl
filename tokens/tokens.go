@@ -14,6 +14,9 @@ const (
 	IDENTIFIER
 	NUMBER
 
+	TRUE
+	FALSE
+
 	LEFT_BRACE
 	RIGHT_BRACE
 	LEFT_PAREN
@@ -35,6 +38,8 @@ var Representations map[TokenType]string = map[TokenType]string{
 	RIGHT_BRACE: "}",
 	LEFT_PAREN:  "(",
 	RIGHT_PAREN: ")",
+	TRUE:        "true",
+	FALSE:       "false",
 	EOF:         "EOF",
 }
 
@@ -45,6 +50,8 @@ var Precedences map[TokenType]int = map[TokenType]int{
 	SLASH:      3,
 	NUMBER:     1,
 	IDENTIFIER: 1,
+	TRUE:       1,
+	FALSE:      1,
 	EOF:        -1,
 }
 

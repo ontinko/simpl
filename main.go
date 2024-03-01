@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
+
+	"simpl/analyzer"
 	"simpl/intpr"
 	"simpl/lexer"
 	"simpl/parser"
@@ -36,6 +39,15 @@ func main() {
 		os.Exit(64)
 		return
 	}
+	staticErrs := analyzer.Prepare(logic)
+	if len(staticErrs) > 0 {
+		for _, e := range staticErrs {
+			e.Print()
+		}
+		os.Exit(64)
+	}
+	fmt.Println("Executing")
+	start := time.Now()
 	for _, tree := range logic {
 		intprErr := intpr.Run(memory, tree)
 		if intprErr != nil {
@@ -43,10 +55,8 @@ func main() {
 			os.Exit(64)
 		}
 	}
+	elapsed := time.Since(start)
+	fmt.Println("Elapsed:", elapsed)
 	fmt.Println("Results:")
-	for _, m := range *memory {
-		for k, v := range m {
-			fmt.Printf("%s = %d\n", k, v)
-		}
-	}
+	memory.Print()
 }

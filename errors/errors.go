@@ -10,6 +10,8 @@ type ErrorType int
 const (
 	SyntaxError ErrorType = iota + 1
 	RuntimeError
+	TypeError
+	ReferenceError
 )
 
 type Error struct {
@@ -24,6 +26,10 @@ func (e *Error) Print() {
 	switch e.Type {
 	case SyntaxError:
 		errorType = "syntax error"
+	case TypeError:
+		errorType = "type error"
+	case ReferenceError:
+		errorType = "reference error"
 	default:
 		errorType = "runtime error"
 	}

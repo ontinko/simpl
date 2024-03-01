@@ -59,9 +59,18 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 				result = append(result, token)
 				start = newStart
 			} else if isAlpha(c) {
-				token, newStart := readIdentifier(&source, filename, line, start, lineStart)
+				end := readAlphaNumeric(&source, start)
+				var token tokens.Token
+				switch source[start:end] {
+				case "true":
+					token = tokens.NewToken(tokens.TRUE, "", filename, line, start-lineStart+1)
+				case "false":
+					token = tokens.NewToken(tokens.FALSE, "", filename, line, start-lineStart+1)
+				default:
+					token = tokens.NewToken(tokens.IDENTIFIER, source[start:end], filename, line, start-lineStart+1)
+				}
 				result = append(result, token)
-				start = newStart
+				start = end
 			} else {
 				token := tokens.NewToken(tokens.UNPERMITTED, source[start:start+1], filename, line, start-lineStart+1)
 				errs = append(errs, errors.Error{Message: "Unpermitted character", Token: token, Type: errors.SyntaxError})
@@ -108,6 +117,18 @@ func readNumber(source *string, filename string, line, start int, lineStart int)
 	}
 	token := tokens.NewToken(tokens.NUMBER, (*source)[start:end], filename, line, start-lineStart+1)
 	return token, end
+}
+
+func readAlphaNumeric(source *string, start int) int {
+	end := start + 1
+	for {
+		c := (*source)[end]
+		if !isDigit(c) && !isAlpha(c) {
+			break
+		}
+		end++
+	}
+	return end
 }
 
 func readIdentifier(source *string, filename string, line, start int, lineStart int) (tokens.Token, int) {
