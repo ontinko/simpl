@@ -103,6 +103,10 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 					token = tokens.NewToken(tokens.TRUE, "", filename, line, start-lineStart+1)
 				case "false":
 					token = tokens.NewToken(tokens.FALSE, "", filename, line, start-lineStart+1)
+				case "if":
+					token = tokens.NewToken(tokens.IF, "", filename, line, start-lineStart+1)
+				case "else":
+					token = tokens.NewToken(tokens.ELSE, "", filename, line, start-lineStart+1)
 				default:
 					token = tokens.NewToken(tokens.IDENTIFIER, source[start:end], filename, line, start-lineStart+1)
 				}

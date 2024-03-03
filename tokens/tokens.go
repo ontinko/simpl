@@ -24,6 +24,9 @@ const (
 	OR
 	AND
 
+	IF
+	ELSE
+
 	LEFT_BRACE
 	RIGHT_BRACE
 	LEFT_PAREN
@@ -52,6 +55,8 @@ var Representations map[TokenType]string = map[TokenType]string{
 	FALSE:        "false",
 	OR:           "OR",
 	AND:          "AND",
+	IF:           "if",
+	ELSE:         "else",
 	EOF:          "EOF",
 }
 
