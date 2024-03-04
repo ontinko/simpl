@@ -3,12 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
-
-	"simpl/analyzer"
-	"simpl/intpr"
+	"simpl/ast"
 	"simpl/lexer"
+	"simpl/memory"
 	"simpl/parser"
+	"time"
 )
 
 func main() {
@@ -24,6 +23,7 @@ func main() {
 		fmt.Println("File not found")
 		os.Exit(64)
 	}
+	startTime := time.Now()
 	tokens, errs := lexer.Tokenize(string(source), filename, 1)
 	if len(errs) > 0 {
 		for _, e := range errs {
@@ -31,28 +31,32 @@ func main() {
 		}
 		return
 	}
-	memory := intpr.NewMemory()
+	memory := memory.NewMemory()
 
 	parseSource := parser.New(tokens)
-	logic, error := parseSource.Parse()
+	initialScope := 0
+	program, error := parseSource.Parse(initialScope)
 	if error != nil {
 		error.Print()
 		os.Exit(64)
 		return
 	}
-	staticErrs := analyzer.Prepare(logic)
+	analysisCache := []map[string]ast.DataType{}
+	staticErrs := program.Prepare(analysisCache)
 	if len(staticErrs) > 0 {
 		for _, e := range staticErrs {
 			e.Print()
 		}
 		os.Exit(64)
 	}
+	elapsed := time.Since(startTime)
+	fmt.Println("Time elapsed for parsing:", elapsed)
 	if execute {
 		start := time.Now()
-		for _, tree := range logic {
-			intprErr := intpr.Run(memory, tree)
-			if intprErr != nil {
-				intprErr.Print()
+		for _, stmt := range program.Statements {
+			err := stmt.Execute(memory)
+			if err != nil {
+				err.Print()
 				os.Exit(64)
 			}
 		}
@@ -61,8 +65,8 @@ func main() {
 		fmt.Println("Results:")
 		memory.Print()
 	} else {
-		for _, tree := range logic {
-			tree.Root.Visualize()
+		for _, stmt := range program.Statements {
+			stmt.Visualize()
 		}
 	}
 }

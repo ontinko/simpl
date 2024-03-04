@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"simpl/ast"
 	"simpl/errors"
+	"simpl/tokens"
 	sTokens "simpl/tokens"
 )
 
@@ -19,9 +20,9 @@ func New(tokens []sTokens.Token) ParseSource {
 	}
 }
 
-func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
+func (s *ParseSource) parseParens() (*ast.Expression, *errors.Error) {
 	s.current++
-	node, err := s.parseExpression(0)
+	node, err := s.parseExpression(0, sTokens.RIGHT_PAREN)
 	if err != nil {
 		return nil, err
 	}
@@ -34,11 +35,11 @@ func (s *ParseSource) parseParens() (*ast.Node, *errors.Error) {
 	return node, nil
 }
 
-func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
+func (s *ParseSource) parsePrefix() (*ast.Expression, *errors.Error) {
 	token := s.tokens[s.current]
 	switch token.Type {
 	case sTokens.BANG:
-		node := &ast.Node{Token: token, Type: ast.Expression}
+		node := &ast.Expression{Token: token}
 		s.current++
 		expression, err := s.parsePrefix()
 		if err != nil {
@@ -46,9 +47,8 @@ func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 		}
 		node.Left = expression
 		return node, nil
-
 	case sTokens.IDENTIFIER, sTokens.NUMBER, sTokens.TRUE, sTokens.FALSE:
-		return &ast.Node{Token: token, Type: ast.Value}, nil
+		return &ast.Expression{Token: token}, nil
 	case sTokens.LEFT_PAREN:
 		return s.parseParens()
 	default:
@@ -56,7 +56,7 @@ func (s *ParseSource) parsePrefix() (*ast.Node, *errors.Error) {
 	}
 }
 
-func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error) {
+func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType) (*ast.Expression, *errors.Error) {
 	left, err := s.parsePrefix()
 	if err != nil {
 		return nil, err
@@ -65,22 +65,22 @@ func (s *ParseSource) parseExpression(precedence int) (*ast.Node, *errors.Error)
 		if s.tokens[s.current+1].Type == sTokens.EOF {
 			return nil, &errors.Error{Message: "expected ;", Token: s.tokens[s.current], Type: errors.SyntaxError}
 		}
-		if s.tokens[s.current+1].Type == sTokens.SEMICOLON || precedence >= sTokens.Precedences[s.tokens[s.current+1].Type] {
+		if s.tokens[s.current+1].Type == endToken || precedence >= sTokens.Precedences[s.tokens[s.current+1].Type] {
 			break
 		}
 		s.current++
 		token := s.tokens[s.current]
-		var nextLeft *ast.Node
+		var nextLeft *ast.Expression
 		switch token.Type {
 		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL:
-			nextLeft = &ast.Node{Token: token, Type: ast.Expression}
+			nextLeft = &ast.Expression{Token: token}
 		default:
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 		}
 		nextLeft.Left = left
 		prec := sTokens.Precedences[token.Type]
 		s.current++
-		right, err := s.parseExpression(prec)
+		right, err := s.parseExpression(prec, endToken)
 		if err != nil {
 			return nil, err
 		}
@@ -95,54 +95,86 @@ func (s *ParseSource) unexpectedError(token sTokens.Token) *errors.Error {
 	return &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 }
 
-func (s *ParseSource) Parse() ([]*ast.AST, *errors.Error) {
-	trees := []*ast.AST{}
+func (s *ParseSource) Parse(baseScope int) (*ast.Program, *errors.Error) {
+	statements := []ast.Statement{}
 
 	sourceSize := len(s.tokens) - 1
-	scope := 0
+	scope := baseScope
 	scopeStarts := []sTokens.Token{}
 
+MainLoop:
 	for s.current < sourceSize {
-		tree := ast.NewAST()
-		t := s.tokens[s.current]
-		switch t.Type {
+		token := s.tokens[s.current]
+		switch token.Type {
 		case sTokens.LEFT_BRACE:
-			scopeStarts = append(scopeStarts, t)
-			scope++
 			s.current++
+			block, err := s.Parse(scope + 1)
+			if err != nil {
+				return nil, err
+			}
+			statements = append(statements, block.Statements...)
 		case sTokens.RIGHT_BRACE:
 			if scope == 0 {
-				return []*ast.AST{}, s.unexpectedError(t)
+				return nil, s.unexpectedError(token)
 			}
-			scope--
-			scopeStarts = scopeStarts[:scope]
 			s.current++
+			break MainLoop
 		case sTokens.IDENTIFIER:
-			assignment := s.tokens[s.current+1]
-			if assignment.Type != sTokens.COLON_EQUAL && assignment.Type != sTokens.EQUAL {
-				return []*ast.AST{}, s.unexpectedError(assignment)
+			var stmt ast.Assignment
+			operator := s.tokens[s.current+1]
+			if operator.Type != sTokens.COLON_EQUAL && operator.Type != sTokens.EQUAL {
+				return nil, s.unexpectedError(operator)
 			}
-			tree.Scope = scope
-			tree.Root = &ast.Node{Token: assignment, Type: ast.Statement}
-			tree.Root.Left = &ast.Node{Token: t, Type: ast.Value}
 			s.current += 2
-			right, err := s.parseExpression(sTokens.Precedences[sTokens.EOF])
+			exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], sTokens.SEMICOLON)
 			if err != nil {
-				return []*ast.AST{}, err
+				return nil, err
 			}
-			tree.Root.Right = right
-			trees = append(trees, &tree)
+			stmt.Var = token
+			stmt.Operator = operator
+			stmt.Exp = exp
+			stmt.Scope = scope
+
+			statements = append(statements, &stmt)
 			s.current += 2
-		case sTokens.EOF:
-			if scope > 0 {
-				brace := scopeStarts[0]
-				return []*ast.AST{}, &errors.Error{Message: "Scope not closed", Token: brace, Type: errors.SyntaxError}
+		case sTokens.IF:
+			var stmt ast.Conditional
+			s.current++
+			condition, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], sTokens.LEFT_BRACE)
+			if err != nil {
+				return nil, err
 			}
-			break
+			s.current += 2
+
+			thenBlock, err := s.Parse(scope + 1)
+			if err != nil {
+				return nil, err
+			}
+			stmt.Token = token
+			stmt.Condition = condition
+			stmt.Then = thenBlock
+			stmt.Scope = scope
+
+			token = s.tokens[s.current]
+			if token.Type == tokens.ELSE {
+				s.current += 2
+				elseBlock, err := s.Parse(scope + 1)
+				if err != nil {
+					return nil, err
+				}
+				stmt.Else = elseBlock
+			}
+			statements = append(statements, &stmt)
+		case sTokens.EOF:
+			if scope != 0 {
+				brace := scopeStarts[0]
+				return nil, &errors.Error{Message: "Scope not closed", Token: brace, Type: errors.SyntaxError}
+			}
+			break MainLoop
 		default:
-			return []*ast.AST{}, s.unexpectedError(t)
+			return nil, s.unexpectedError(token)
 		}
 	}
 
-	return trees, nil
+	return &ast.Program{Statements: statements}, nil
 }
