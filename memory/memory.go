@@ -49,6 +49,7 @@ func (m *Memory) GetInt(token tokens.Token) int {
 		val, found := data[i][token.Value]
 		if found {
 			result = val
+			break
 		}
 	}
 	return result
