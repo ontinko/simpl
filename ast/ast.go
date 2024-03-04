@@ -225,7 +225,7 @@ func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 			}
 			return left != right, nil
 		}
-	case tokens.LESS:
+	case tokens.LESS, tokens.LESS_EQUAL, tokens.GREATER, tokens.GREATER_EQUAL:
 		left, err := e.Left.evalInt(mem)
 		if err != nil {
 			return false, err
@@ -234,17 +234,16 @@ func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 		if err != nil {
 			return false, err
 		}
-		return left < right, nil
-	case tokens.GREATER:
-		left, err := e.Left.evalInt(mem)
-		if err != nil {
-			return false, err
+		switch e.Token.Type {
+		case tokens.LESS:
+			return left < right, nil
+		case tokens.GREATER:
+			return left > right, nil
+		case tokens.LESS_EQUAL:
+			return left <= right, nil
+		default:
+			return left >= right, nil
 		}
-		right, err := e.Right.evalInt(mem)
-		if err != nil {
-			return false, err
-		}
-		return left > right, nil
 	}
 
 	left, err := e.Left.evalBool(mem)
@@ -318,7 +317,7 @@ func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
 				return err
 			}
 			if condition {
-                then = true
+				then = true
 				for _, stmt := range s.Then.Statements {
 					stmt.Execute(mem)
 				}
@@ -387,7 +386,7 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 		if e.Left.DataType != e.Right.DataType && e.Left.DataType != Invalid && e.Right.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "cannot compare values of different types", Token: e.Token, Type: errors.TypeError})
 		}
-	case tokens.LESS, tokens.GREATER:
+	case tokens.LESS, tokens.GREATER, tokens.LESS_EQUAL, tokens.GREATER_EQUAL:
 		e.DataType = Bool
 		if e.Left.DataType != Int && e.Left.DataType != Invalid || e.Right.DataType != Int && e.Right.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "invalid operation", Token: e.Token, Type: errors.TypeError})

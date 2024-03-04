@@ -15,8 +15,6 @@ var singleChars = map[byte]tokens.TokenType{
 	'}': tokens.RIGHT_BRACE,
 	'(': tokens.LEFT_PAREN,
 	')': tokens.RIGHT_PAREN,
-    '<': tokens.LESS,
-    '>': tokens.GREATER,
 }
 
 func Tokenize(source string, filename string, line int) ([]tokens.Token, []errors.Error) {
@@ -58,6 +56,26 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 				start++
 			}
 			result = append(result, token)
+        case '>':
+            var token tokens.Token
+            if peek(&source, start+1) == '=' {
+                token = tokens.NewToken(tokens.GREATER_EQUAL, "", filename, line, start-lineStart+1)
+                start += 2
+            } else {
+                token = tokens.NewToken(tokens.GREATER, "", filename, line, start-lineStart+1)
+                start++
+            }
+            result = append(result, token)
+        case '<':
+            var token tokens.Token
+            if peek(&source, start+1) == '=' {
+                token = tokens.NewToken(tokens.LESS_EQUAL, "", filename, line, start-lineStart+1)
+                start += 2
+            } else {
+                token = tokens.NewToken(tokens.LESS, "", filename, line, start-lineStart+1)
+                start++
+            }
+            result = append(result, token)
 		case '!':
 			var token tokens.Token
 			if peek(&source, start+1) == '=' {
