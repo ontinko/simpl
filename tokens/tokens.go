@@ -19,10 +19,10 @@ const (
 
 	DOUBLE_EQUAL
 	NOT_EQUAL
-    LESS
-    LESS_EQUAL
-    GREATER
-    GREATER_EQUAL
+	LESS
+	LESS_EQUAL
+	GREATER
+	GREATER_EQUAL
 
 	BANG
 	OR
@@ -49,12 +49,12 @@ var Representations map[TokenType]string = map[TokenType]string{
 	EQUAL:       "=",
 	COLON_EQUAL: ":=",
 
-	DOUBLE_EQUAL: "==",
-	NOT_EQUAL:    "!=",
-    LESS: "<",
-    GREATER: ">",
-    LESS_EQUAL: "<=",
-    GREATER_EQUAL: ">=",
+	DOUBLE_EQUAL:  "==",
+	NOT_EQUAL:     "!=",
+	LESS:          "<",
+	GREATER:       ">",
+	LESS_EQUAL:    "<=",
+	GREATER_EQUAL: ">=",
 
 	LEFT_BRACE:  "{",
 	RIGHT_BRACE: "}",
@@ -90,8 +90,8 @@ var Precedences map[TokenType]int = map[TokenType]int{
 	OR:  4,
 	AND: 5,
 
-    LESS: 5,
-    GREATER: 5,
+	LESS:         5,
+	GREATER:      5,
 	DOUBLE_EQUAL: 5,
 	NOT_EQUAL:    6,
 

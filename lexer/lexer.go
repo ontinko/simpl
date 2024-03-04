@@ -56,26 +56,26 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 				start++
 			}
 			result = append(result, token)
-        case '>':
-            var token tokens.Token
-            if peek(&source, start+1) == '=' {
-                token = tokens.NewToken(tokens.GREATER_EQUAL, "", filename, line, start-lineStart+1)
-                start += 2
-            } else {
-                token = tokens.NewToken(tokens.GREATER, "", filename, line, start-lineStart+1)
-                start++
-            }
-            result = append(result, token)
-        case '<':
-            var token tokens.Token
-            if peek(&source, start+1) == '=' {
-                token = tokens.NewToken(tokens.LESS_EQUAL, "", filename, line, start-lineStart+1)
-                start += 2
-            } else {
-                token = tokens.NewToken(tokens.LESS, "", filename, line, start-lineStart+1)
-                start++
-            }
-            result = append(result, token)
+		case '>':
+			var token tokens.Token
+			if peek(&source, start+1) == '=' {
+				token = tokens.NewToken(tokens.GREATER_EQUAL, "", filename, line, start-lineStart+1)
+				start += 2
+			} else {
+				token = tokens.NewToken(tokens.GREATER, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
+		case '<':
+			var token tokens.Token
+			if peek(&source, start+1) == '=' {
+				token = tokens.NewToken(tokens.LESS_EQUAL, "", filename, line, start-lineStart+1)
+				start += 2
+			} else {
+				token = tokens.NewToken(tokens.LESS, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
 		case '!':
 			var token tokens.Token
 			if peek(&source, start+1) == '=' {
@@ -125,8 +125,8 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 					token = tokens.NewToken(tokens.FALSE, "", filename, line, start-lineStart+1)
 				case "if":
 					token = tokens.NewToken(tokens.IF, "", filename, line, start-lineStart+1)
-                case "while":
-                    token = tokens.NewToken(tokens.WHILE, "", filename, line, start-lineStart+1)
+				case "while":
+					token = tokens.NewToken(tokens.WHILE, "", filename, line, start-lineStart+1)
 				case "else":
 					token = tokens.NewToken(tokens.ELSE, "", filename, line, start-lineStart+1)
 				default:

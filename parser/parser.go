@@ -163,7 +163,7 @@ MainLoop:
 					return nil, err
 				}
 				stmt.Else = elseBlock
-            }
+			}
 			statements = append(statements, &stmt)
 		case sTokens.EOF:
 			if scope != 0 {
