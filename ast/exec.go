@@ -1,0 +1,233 @@
+package ast
+
+import (
+	"fmt"
+	"simpl/errors"
+	"simpl/memory"
+	"simpl/tokens"
+	"strconv"
+)
+
+func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
+	if e.DataType != Int {
+		return 0, &errors.Error{Message: "Expected int", Type: errors.TypeError, Token: e.Token}
+	}
+	switch e.Token.Type {
+	case tokens.NUMBER:
+		val, err := strconv.Atoi(e.Token.Value)
+		if err != nil {
+			return 0, &errors.Error{Message: "NaN", Type: errors.TypeError, Token: e.Token}
+		}
+		return val, nil
+	case tokens.IDENTIFIER:
+		return mem.GetInt(e.Token), nil
+	}
+
+	left, err := e.Left.evalInt(mem)
+	if err != nil {
+		return 0, err
+	}
+	right, err := e.Right.evalInt(mem)
+	if err != nil {
+		return 0, err
+	}
+
+	switch e.Token.Type {
+	case tokens.PLUS:
+		return left + right, nil
+	case tokens.MINUS:
+		return left - right, nil
+	case tokens.STAR:
+		return left * right, nil
+	default:
+		return left / right, nil
+	}
+}
+
+func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
+	if e.DataType != Bool {
+		fmt.Println(e.Token.View())
+		fmt.Println("Invalid?", e.DataType == Invalid)
+		fmt.Println("Int?", e.DataType == Int)
+		return false, &errors.Error{Message: "Expected bool", Type: errors.TypeError, Token: e.Token}
+	}
+	switch e.Token.Type {
+	case tokens.TRUE:
+		return true, nil
+	case tokens.FALSE:
+		return false, nil
+	case tokens.BANG:
+		value, err := e.Left.evalBool(mem)
+		if err != nil {
+			return false, err
+		}
+		return !value, nil
+	case tokens.IDENTIFIER:
+		return mem.GetBool(e.Token), nil
+	case tokens.DOUBLE_EQUAL, tokens.NOT_EQUAL:
+		if e.Left.DataType == Bool {
+			left, err := e.Left.evalBool(mem)
+			if err != nil {
+				return false, err
+			}
+			right, err := e.Right.evalBool(mem)
+			if err != nil {
+				return false, err
+			}
+			if e.Token.Type == tokens.DOUBLE_EQUAL {
+				return left == right, nil
+			}
+			return left != right, nil
+		} else {
+			left, err := e.Left.evalInt(mem)
+			if err != nil {
+				return false, err
+			}
+			right, err := e.Right.evalInt(mem)
+			if err != nil {
+				return false, err
+			}
+			if e.Token.Type == tokens.DOUBLE_EQUAL {
+				return left == right, nil
+			}
+			return left != right, nil
+		}
+	case tokens.LESS, tokens.LESS_EQUAL, tokens.GREATER, tokens.GREATER_EQUAL:
+		left, err := e.Left.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		right, err := e.Right.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		switch e.Token.Type {
+		case tokens.LESS:
+			return left < right, nil
+		case tokens.GREATER:
+			return left > right, nil
+		case tokens.LESS_EQUAL:
+			return left <= right, nil
+		default:
+			return left >= right, nil
+		}
+	}
+
+	left, err := e.Left.evalBool(mem)
+	if err != nil {
+		return false, err
+	}
+	right, err := e.Right.evalBool(mem)
+	if err != nil {
+		return false, err
+	}
+
+	switch e.Token.Type {
+	case tokens.OR:
+		return left || right, nil
+	default:
+		return left && right, nil
+	}
+}
+
+func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
+	mem.Resize(s.Scope)
+	switch s.DataType {
+	case Int:
+		value, err := s.Exp.evalInt(mem)
+		if err != nil {
+			return err
+		}
+		switch s.Operator.Type {
+		case tokens.EQUAL:
+			mem.UpdateInt(s.Var, value)
+		case tokens.COLON_EQUAL:
+			mem.SetInt(s.Var, s.Operator, value)
+		}
+	case Bool:
+		value, err := s.Exp.evalBool(mem)
+		if err != nil {
+			return err
+		}
+		switch s.Operator.Type {
+		case tokens.EQUAL:
+			mem.UpdateBool(s.Var, value)
+		case tokens.COLON_EQUAL:
+			mem.SetBool(s.Var, s.Operator, value)
+		}
+	}
+	return nil
+}
+
+func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
+	mem.Resize(s.Scope)
+	switch s.Token.Type {
+	case tokens.IF:
+		condition, err := s.Condition.evalBool(mem)
+		if err != nil {
+			return err
+		}
+		if condition {
+			for _, stmt := range s.Then.Statements {
+				stmt.Execute(mem)
+			}
+		} else if s.Else != nil {
+			for _, stmt := range s.Else.Statements {
+				stmt.Execute(mem)
+			}
+		}
+	default:
+		then := false
+		for {
+			condition, err := s.Condition.evalBool(mem)
+			if err != nil {
+				return err
+			}
+			if condition {
+				then = true
+				for _, stmt := range s.Then.Statements {
+					stmt.Execute(mem)
+				}
+			} else {
+				break
+			}
+
+		}
+		if !then && s.Else != nil {
+			for _, stmt := range s.Else.Statements {
+				stmt.Execute(mem)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *For) Execute(mem *memory.Memory) *errors.Error {
+	err := s.Init.Execute(mem)
+	if err != nil {
+		return err
+	}
+	for {
+		condition, err := s.Condition.evalBool(mem)
+		if err != nil {
+			return err
+		}
+		if condition {
+			if s.Block != nil {
+				for _, stmt := range s.Block.Statements {
+					err := stmt.Execute(mem)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			err := s.After.Execute(mem)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		break
+	}
+	return nil
+}
