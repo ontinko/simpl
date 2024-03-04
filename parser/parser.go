@@ -72,7 +72,7 @@ func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType
 		token := s.tokens[s.current]
 		var nextLeft *ast.Expression
 		switch token.Type {
-		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL:
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL, sTokens.LESS, sTokens.GREATER:
 			nextLeft = &ast.Expression{Token: token}
 		default:
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
@@ -137,7 +137,7 @@ MainLoop:
 
 			statements = append(statements, &stmt)
 			s.current += 2
-		case sTokens.IF:
+		case sTokens.IF, sTokens.WHILE:
 			var stmt ast.Conditional
 			s.current++
 			condition, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], sTokens.LEFT_BRACE)
@@ -163,7 +163,7 @@ MainLoop:
 					return nil, err
 				}
 				stmt.Else = elseBlock
-			}
+            }
 			statements = append(statements, &stmt)
 		case sTokens.EOF:
 			if scope != 0 {

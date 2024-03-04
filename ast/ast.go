@@ -225,6 +225,26 @@ func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 			}
 			return left != right, nil
 		}
+	case tokens.LESS:
+		left, err := e.Left.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		right, err := e.Right.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		return left < right, nil
+	case tokens.GREATER:
+		left, err := e.Left.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		right, err := e.Right.evalInt(mem)
+		if err != nil {
+			return false, err
+		}
+		return left > right, nil
 	}
 
 	left, err := e.Left.evalBool(mem)
@@ -275,17 +295,42 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 
 func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
 	mem.Resize(s.Scope)
-	condition, err := s.Condition.evalBool(mem)
-	if err != nil {
-		return err
-	}
-	if condition {
-		for _, stmt := range s.Then.Statements {
-			stmt.Execute(mem)
+	switch s.Token.Type {
+	case tokens.IF:
+		condition, err := s.Condition.evalBool(mem)
+		if err != nil {
+			return err
 		}
-	} else {
-		for _, stmt := range s.Else.Statements {
-			stmt.Execute(mem)
+		if condition {
+			for _, stmt := range s.Then.Statements {
+				stmt.Execute(mem)
+			}
+		} else if s.Else != nil {
+			for _, stmt := range s.Else.Statements {
+				stmt.Execute(mem)
+			}
+		}
+	default:
+		then := false
+		for {
+			condition, err := s.Condition.evalBool(mem)
+			if err != nil {
+				return err
+			}
+			if condition {
+                then = true
+				for _, stmt := range s.Then.Statements {
+					stmt.Execute(mem)
+				}
+			} else {
+				break
+			}
+
+		}
+		if !then && s.Else != nil {
+			for _, stmt := range s.Else.Statements {
+				stmt.Execute(mem)
+			}
 		}
 	}
 	return nil
@@ -341,6 +386,11 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 		e.DataType = Bool
 		if e.Left.DataType != e.Right.DataType && e.Left.DataType != Invalid && e.Right.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "cannot compare values of different types", Token: e.Token, Type: errors.TypeError})
+		}
+	case tokens.LESS, tokens.GREATER:
+		e.DataType = Bool
+		if e.Left.DataType != Int && e.Left.DataType != Invalid || e.Right.DataType != Int && e.Right.DataType != Invalid {
+			errs = append(errs, &errors.Error{Message: "invalid operation", Token: e.Token, Type: errors.TypeError})
 		}
 	case tokens.BANG:
 		e.DataType = Bool

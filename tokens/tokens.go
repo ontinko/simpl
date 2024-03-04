@@ -19,6 +19,8 @@ const (
 
 	DOUBLE_EQUAL
 	NOT_EQUAL
+    LESS
+    GREATER
 
 	BANG
 	OR
@@ -26,6 +28,7 @@ const (
 
 	IF
 	ELSE
+	WHILE
 
 	LEFT_BRACE
 	RIGHT_BRACE
@@ -37,27 +40,34 @@ const (
 )
 
 var Representations map[TokenType]string = map[TokenType]string{
-	PLUS:         "+",
-	MINUS:        "-",
-	STAR:         "*",
-	SLASH:        "/",
-	EQUAL:        "=",
-	COLON_EQUAL:  ":=",
+	PLUS:        "+",
+	MINUS:       "-",
+	STAR:        "*",
+	SLASH:       "/",
+	EQUAL:       "=",
+	COLON_EQUAL: ":=",
+
 	DOUBLE_EQUAL: "==",
 	NOT_EQUAL:    "!=",
-	SEMICOLON:    ";",
-	LEFT_BRACE:   "{",
-	RIGHT_BRACE:  "}",
-	LEFT_PAREN:   "(",
-	RIGHT_PAREN:  ")",
-	BANG:         "!",
-	TRUE:         "true",
-	FALSE:        "false",
-	OR:           "OR",
-	AND:          "AND",
-	IF:           "if",
-	ELSE:         "else",
-	EOF:          "EOF",
+    LESS: "<",
+    GREATER: ">",
+
+	LEFT_BRACE:  "{",
+	RIGHT_BRACE: "}",
+	LEFT_PAREN:  "(",
+	RIGHT_PAREN: ")",
+
+	BANG:  "!",
+	TRUE:  "true",
+	FALSE: "false",
+	OR:    "OR",
+	AND:   "AND",
+	IF:    "if",
+	ELSE:  "else",
+	WHILE: "while",
+
+	SEMICOLON: ";",
+	EOF:       "EOF",
 }
 
 var Precedences map[TokenType]int = map[TokenType]int{
@@ -76,6 +86,8 @@ var Precedences map[TokenType]int = map[TokenType]int{
 	OR:  4,
 	AND: 5,
 
+    LESS: 5,
+    GREATER: 5,
 	DOUBLE_EQUAL: 5,
 	NOT_EQUAL:    6,
 
