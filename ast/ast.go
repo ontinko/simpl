@@ -43,6 +43,81 @@ type Conditional struct {
 	Else      *Program
 }
 
+type For struct {
+	Statement
+	Scope     int
+	Token     tokens.Token
+	Init      *Assignment
+	Condition *Expression
+	After     *Assignment
+	Block     *Program
+}
+
+func (s *For) Execute(mem *memory.Memory) *errors.Error {
+	err := s.Init.Execute(mem)
+	if err != nil {
+		return err
+	}
+	for {
+		condition, err := s.Condition.evalBool(mem)
+		if err != nil {
+			return err
+		}
+		if condition {
+			if s.Block != nil {
+				for _, stmt := range s.Block.Statements {
+					err := stmt.Execute(mem)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			err := s.After.Execute(mem)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+func (s *For) Visualize() {
+	fmt.Println("Init:")
+	s.Init.Visualize()
+	fmt.Println("Condition:")
+	s.Condition.Visualize()
+	fmt.Println("After:")
+	s.After.Visualize()
+	fmt.Println("Block:")
+	if s.Block != nil {
+		for _, stmt := range s.Block.Statements {
+			stmt.Visualize()
+		}
+	}
+}
+
+func (s *For) GetScope() int {
+	return s.Scope
+}
+
+func (s *For) Prepare(cache []map[string]DataType) []*errors.Error {
+	for len(cache) <= s.Scope {
+		cache = append(cache, map[string]DataType{})
+	}
+	if len(cache) > s.Scope+1 {
+		cache = cache[:s.Scope+1]
+	}
+	errs := []*errors.Error{}
+	errs = append(errs, s.Init.Prepare(cache)...)
+	errs = append(errs, s.Condition.Prepare(cache)...)
+	errs = append(errs, s.After.Prepare(cache)...)
+	errs = append(errs, s.Block.Prepare(cache)...)
+
+	return errs
+}
+
 type Assignment struct {
 	Statement
 	Scope    int

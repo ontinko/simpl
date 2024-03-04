@@ -56,6 +56,28 @@ func (s *ParseSource) parsePrefix() (*ast.Expression, *errors.Error) {
 	}
 }
 
+func (s *ParseSource) parseAssignment(scope int, endToken sTokens.TokenType) (*ast.Assignment, *errors.Error) {
+	var stmt ast.Assignment
+	token := s.tokens[s.current]
+	operator := s.tokens[s.current+1]
+	if operator.Type != sTokens.COLON_EQUAL && operator.Type != sTokens.EQUAL {
+		return nil, s.unexpectedError(operator)
+	}
+	s.current += 2
+	exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
+	if err != nil {
+		return nil, err
+	}
+	stmt.Var = token
+	stmt.Operator = operator
+	stmt.Exp = exp
+	stmt.Scope = scope
+	fmt.Println("Parsed with scope", scope)
+
+	s.current += 2
+	return &stmt, nil
+}
+
 func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType) (*ast.Expression, *errors.Error) {
 	left, err := s.parsePrefix()
 	if err != nil {
@@ -120,23 +142,11 @@ MainLoop:
 			s.current++
 			break MainLoop
 		case sTokens.IDENTIFIER:
-			var stmt ast.Assignment
-			operator := s.tokens[s.current+1]
-			if operator.Type != sTokens.COLON_EQUAL && operator.Type != sTokens.EQUAL {
-				return nil, s.unexpectedError(operator)
-			}
-			s.current += 2
-			exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], sTokens.SEMICOLON)
+			stmt, err := s.parseAssignment(scope, sTokens.SEMICOLON)
 			if err != nil {
 				return nil, err
 			}
-			stmt.Var = token
-			stmt.Operator = operator
-			stmt.Exp = exp
-			stmt.Scope = scope
-
-			statements = append(statements, &stmt)
-			s.current += 2
+			statements = append(statements, stmt)
 		case sTokens.IF, sTokens.WHILE:
 			var stmt ast.Conditional
 			s.current++
@@ -165,6 +175,26 @@ MainLoop:
 				stmt.Else = elseBlock
 			}
 			statements = append(statements, &stmt)
+		case sTokens.FOR:
+			s.current++
+			init, err := s.parseAssignment(scope+1, sTokens.SEMICOLON)
+			if err != nil {
+				return nil, err
+			}
+			condition, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], sTokens.SEMICOLON)
+			if err != nil {
+				return nil, err
+			}
+			s.current += 2
+			after, err := s.parseAssignment(scope+1, sTokens.LEFT_BRACE)
+			if err != nil {
+				return nil, err
+			}
+			block, err := s.Parse(scope + 1)
+			if err != nil {
+				return nil, err
+			}
+			statements = append(statements, &ast.For{Scope: scope + 1, Init: init, Condition: condition, After: after, Block: block, Token: token})
 		case sTokens.EOF:
 			if scope != 0 {
 				brace := scopeStarts[0]

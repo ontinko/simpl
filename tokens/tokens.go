@@ -31,6 +31,7 @@ const (
 	IF
 	ELSE
 	WHILE
+	FOR
 
 	LEFT_BRACE
 	RIGHT_BRACE
@@ -69,6 +70,7 @@ var Representations map[TokenType]string = map[TokenType]string{
 	IF:    "if",
 	ELSE:  "else",
 	WHILE: "while",
+	FOR:   "for",
 
 	SEMICOLON: ";",
 	EOF:       "EOF",
