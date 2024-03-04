@@ -120,6 +120,17 @@ func (m *Memory) DivInt(token tokens.Token, n int) {
 	}
 }
 
+func (m *Memory) ModInt(token tokens.Token, n int) {
+	name := token.Value
+	for i := len(m.Ints) - 1; i >= 0; i-- {
+		_, found := m.Ints[i][name]
+		if found {
+			m.Ints[i][name] %= n
+			break
+		}
+	}
+}
+
 func (m *Memory) UpdateBool(token tokens.Token, value bool) {
 	name := token.Value
 	for i := len(m.Bools) - 1; i >= 0; i-- {

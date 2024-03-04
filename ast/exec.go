@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"fmt"
 	"simpl/errors"
 	"simpl/memory"
 	"simpl/tokens"
@@ -39,19 +38,21 @@ func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
 		return left - right, nil
 	case tokens.STAR:
 		return left * right, nil
-	default:
+	case tokens.SLASH:
 		if right == 0 {
 			return 0, &errors.Error{Message: "zero division not allowed", Token: e.Token, Type: errors.RuntimeError}
 		}
 		return left / right, nil
+	default:
+		if right == 0 {
+			return 0, &errors.Error{Message: "zero division not allowed", Token: e.Token, Type: errors.RuntimeError}
+		}
+		return left % right, nil
 	}
 }
 
 func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 	if e.DataType != Bool {
-		fmt.Println(e.Token.View())
-		fmt.Println("Invalid?", e.DataType == Invalid)
-		fmt.Println("Int?", e.DataType == Int)
 		return false, &errors.Error{Message: "Expected bool", Type: errors.TypeError, Token: e.Token}
 	}
 	switch e.Token.Type {
@@ -164,6 +165,11 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 				return &errors.Error{Message: "zero division not allowed", Token: s.Operator, Type: errors.RuntimeError}
 			}
 			mem.DivInt(s.Var, value)
+		case tokens.MODULO_EQUAL:
+			if value == 0 {
+				return &errors.Error{Message: "zero division not allowed", Token: s.Operator, Type: errors.RuntimeError}
+			}
+			mem.ModInt(s.Var, value)
 		case tokens.COLON_EQUAL:
 			mem.SetInt(s.Var, s.Operator, value)
 		}

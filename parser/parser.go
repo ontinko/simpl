@@ -61,7 +61,7 @@ func (s *ParseSource) parseAssignment(scope int, endToken sTokens.TokenType) (*a
 	token := s.tokens[s.current]
 	operator := s.tokens[s.current+1]
 	switch operator.Type {
-	case sTokens.COLON_EQUAL, sTokens.EQUAL, sTokens.PLUS_EQUAL, sTokens.MINUS_EQUAL, sTokens.STAR_EQUAL, sTokens.SLASH_EQUAL:
+	case sTokens.COLON_EQUAL, sTokens.EQUAL, sTokens.PLUS_EQUAL, sTokens.MINUS_EQUAL, sTokens.STAR_EQUAL, sTokens.SLASH_EQUAL, sTokens.MODULO_EQUAL:
 		s.current += 2
 		exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
 		if err != nil {
@@ -103,7 +103,7 @@ func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType
 		token := s.tokens[s.current]
 		var nextLeft *ast.Expression
 		switch token.Type {
-		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL, sTokens.LESS, sTokens.GREATER, sTokens.LESS_EQUAL, sTokens.GREATER_EQUAL:
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL, sTokens.LESS, sTokens.GREATER, sTokens.LESS_EQUAL, sTokens.GREATER_EQUAL, sTokens.MODULO:
 			nextLeft = &ast.Expression{Token: token}
 		default:
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}

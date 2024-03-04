@@ -33,7 +33,7 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 			errs = append(errs, &errors.Error{Message: "undefined variable", Token: e.Token, Type: errors.ReferenceError})
 		}
 		e.DataType = dataType
-	case tokens.STAR, tokens.SLASH, tokens.PLUS, tokens.MINUS:
+	case tokens.STAR, tokens.SLASH, tokens.PLUS, tokens.MINUS, tokens.MODULO:
 		e.DataType = Int
 		if e.Left.DataType != Int && e.Left.DataType != Invalid || e.Right.DataType != Int && e.Right.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "invalid operation", Token: e.Token, Type: errors.TypeError})
@@ -98,6 +98,11 @@ func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 		s.DataType = Int
 		if dataType != Int && dataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "int/dec on wrong type", Token: s.Var, Type: errors.TypeError})
+		}
+	case tokens.MODULO:
+		s.DataType = Int
+		if dataType != Int && dataType != Invalid || s.Exp.DataType != Int && s.Exp.DataType != Invalid {
+			errs = append(errs, &errors.Error{Message: "assigning wrong type", Token: s.Var, Type: errors.TypeError})
 		}
 	default:
 		if dataType != s.Exp.DataType && s.Exp.DataType != Invalid {

@@ -8,6 +8,7 @@ const (
 	STAR
 	SLASH
 	EQUAL
+	MODULO
 
 	DOUBLE_PLUS
 	DOUBLE_MINUS
@@ -16,6 +17,7 @@ const (
 	MINUS_EQUAL
 	STAR_EQUAL
 	SLASH_EQUAL
+	MODULO_EQUAL
 
 	COLON_EQUAL
 	SEMICOLON
@@ -52,18 +54,20 @@ const (
 )
 
 var Representations map[TokenType]string = map[TokenType]string{
-	PLUS:  "+",
-	MINUS: "-",
-	STAR:  "*",
-	SLASH: "/",
+	PLUS:   "+",
+	MINUS:  "-",
+	STAR:   "*",
+	SLASH:  "/",
+	MODULO: "%",
 
 	DOUBLE_PLUS:  "++",
 	DOUBLE_MINUS: "--",
 
-	PLUS_EQUAL:  "+=",
-	MINUS_EQUAL: "-=",
-	STAR_EQUAL:  "*=",
-	SLASH_EQUAL: "/=",
+	PLUS_EQUAL:   "+=",
+	MINUS_EQUAL:  "-=",
+	STAR_EQUAL:   "*=",
+	SLASH_EQUAL:  "/=",
+	MODULO_EQUAL: "%=",
 
 	EQUAL:       "=",
 	COLON_EQUAL: ":=",

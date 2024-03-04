@@ -10,6 +10,7 @@ var singleChars = map[byte]tokens.TokenType{
 	'-': tokens.MINUS,
 	'*': tokens.STAR,
 	'/': tokens.SLASH,
+	'%': tokens.MODULO,
 	';': tokens.SEMICOLON,
 	'{': tokens.LEFT_BRACE,
 	'}': tokens.RIGHT_BRACE,
@@ -94,6 +95,19 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 				continue
 			} else {
 				token = tokens.NewToken(tokens.SLASH, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
+		case '%':
+			next := peek(&source, start+1)
+			var token tokens.Token
+			if next == '=' {
+				token = tokens.NewToken(tokens.MODULO_EQUAL, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			} else {
+				token = tokens.NewToken(tokens.MODULO, "", filename, line, start-lineStart+1)
 				start++
 			}
 			result = append(result, token)
