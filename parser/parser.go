@@ -60,21 +60,30 @@ func (s *ParseSource) parseAssignment(scope int, endToken sTokens.TokenType) (*a
 	var stmt ast.Assignment
 	token := s.tokens[s.current]
 	operator := s.tokens[s.current+1]
-	if operator.Type != sTokens.COLON_EQUAL && operator.Type != sTokens.EQUAL {
+	switch operator.Type {
+	case sTokens.COLON_EQUAL, sTokens.EQUAL, sTokens.PLUS_EQUAL, sTokens.MINUS_EQUAL, sTokens.STAR_EQUAL, sTokens.SLASH_EQUAL:
+		s.current += 2
+		exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
+		if err != nil {
+			return nil, err
+		}
+		stmt.Var = token
+		stmt.Operator = operator
+		stmt.Exp = exp
+		stmt.Scope = scope
+
+		s.current += 2
+	case sTokens.DOUBLE_PLUS, sTokens.DOUBLE_MINUS:
+		if s.tokens[s.current+2].Type != endToken {
+			return nil, s.unexpectedError(s.tokens[s.current+2])
+		}
+		stmt.Var = token
+		stmt.Operator = operator
+		stmt.Scope = scope
+		s.current += 3
+	default:
 		return nil, s.unexpectedError(operator)
 	}
-	s.current += 2
-	exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
-	if err != nil {
-		return nil, err
-	}
-	stmt.Var = token
-	stmt.Operator = operator
-	stmt.Exp = exp
-	stmt.Scope = scope
-	fmt.Println("Parsed with scope", scope)
-
-	s.current += 2
 	return &stmt, nil
 }
 

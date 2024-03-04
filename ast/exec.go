@@ -134,6 +134,15 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 	mem.Resize(s.Scope)
 	switch s.DataType {
 	case Int:
+		switch s.Operator.Type {
+		case tokens.DOUBLE_PLUS:
+			mem.IncInt(s.Var)
+			return nil
+		case tokens.DOUBLE_MINUS:
+			mem.DecInt(s.Var)
+			return nil
+		}
+
 		value, err := s.Exp.evalInt(mem)
 		if err != nil {
 			return err

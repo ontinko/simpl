@@ -76,6 +76,28 @@ func (m *Memory) UpdateInt(token tokens.Token, value int) {
 	}
 }
 
+func (m *Memory) IncInt(token tokens.Token) {
+	name := token.Value
+	for i := len(m.Ints) - 1; i >= 0; i-- {
+		_, found := m.Ints[i][name]
+		if found {
+			m.Ints[i][name]++
+			break
+		}
+	}
+}
+
+func (m *Memory) DecInt(token tokens.Token) {
+	name := token.Value
+	for i := len(m.Ints) - 1; i >= 0; i-- {
+		_, found := m.Ints[i][name]
+		if found {
+			m.Ints[i][name]--
+			break
+		}
+	}
+}
+
 func (m *Memory) UpdateBool(token tokens.Token, value bool) {
 	name := token.Value
 	for i := len(m.Bools) - 1; i >= 0; i-- {

@@ -35,6 +35,68 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 		case '#':
 			newStart := skipComment(&source, start)
 			start = newStart
+		case '+':
+			next := peek(&source, start+1)
+			var token tokens.Token
+			if next == '=' {
+				token = tokens.NewToken(tokens.PLUS_EQUAL, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			} else if next == '+' {
+				token = tokens.NewToken(tokens.DOUBLE_PLUS, "", filename, line, start-lineStart+1)
+				start += 2
+			} else {
+				token = tokens.NewToken(tokens.PLUS, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
+		case '-':
+			next := peek(&source, start+1)
+			var token tokens.Token
+			if next == '=' {
+				token = tokens.NewToken(tokens.MINUS_EQUAL, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			} else if next == '-' {
+				token = tokens.NewToken(tokens.DOUBLE_MINUS, "", filename, line, start-lineStart+1)
+				start += 2
+			} else if isDigit(next) {
+				var newStart int
+				token, newStart = readNumber(&source, filename, line, start, lineStart)
+				start = newStart
+			} else {
+				start++
+				token = tokens.NewToken(tokens.MINUS, "", filename, line, start-lineStart+1)
+			}
+			result = append(result, token)
+		case '*':
+			next := peek(&source, start+1)
+			var token tokens.Token
+			if next == '=' {
+				token = tokens.NewToken(tokens.STAR_EQUAL, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			} else {
+				token = tokens.NewToken(tokens.STAR, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
+		case '/':
+			next := peek(&source, start+1)
+			var token tokens.Token
+			if next == '=' {
+				token = tokens.NewToken(tokens.SLASH_EQUAL, "", filename, line, start-lineStart+1)
+				result = append(result, token)
+				start += 2
+				continue
+			} else {
+				token = tokens.NewToken(tokens.SLASH, "", filename, line, start-lineStart+1)
+				start++
+			}
+			result = append(result, token)
 		case ':':
 			if peek(&source, start+1) == '=' {
 				token := tokens.NewToken(tokens.COLON_EQUAL, "", filename, line, start-lineStart+1)
@@ -107,14 +169,15 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 			result = append(result, token)
 			errs = append(errs, errors.Error{Message: "unpermitted character", Token: token, Type: errors.SyntaxError})
 		default:
-			if c == '-' || isDigit(c) {
-				token, newStart := readNumber(&source, filename, line, start, lineStart)
-				result = append(result, token)
-				start = newStart
-			} else if singleChars[c] != 0 {
+			if singleChars[c] != 0 {
 				token := tokens.NewToken(singleChars[c], "", filename, line, start-lineStart+1)
 				result = append(result, token)
 				start++
+			} else if isDigit(c) {
+				token, newStart := readNumber(&source, filename, line, start, lineStart)
+				result = append(result, token)
+				start = newStart
+
 			} else if isAlpha(c) {
 				end := readAlphaNumeric(&source, start)
 				var token tokens.Token

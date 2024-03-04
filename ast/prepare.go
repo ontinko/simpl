@@ -67,8 +67,7 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 	errs := []*errors.Error{}
 	expErrs := s.Exp.Prepare(cache)
-	switch s.Operator.Type {
-	case tokens.COLON_EQUAL:
+	if s.Operator.Type == tokens.COLON_EQUAL {
 		_, defined := cache[len(cache)-1][s.Var.Value]
 		if defined {
 			errs = append(errs, &errors.Error{Message: "variable reassignment not allowed", Token: s.Var, Type: errors.SyntaxError})
@@ -76,26 +75,38 @@ func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 			cache[len(cache)-1][s.Var.Value] = s.Exp.DataType
 			s.DataType = s.Exp.DataType
 		}
-	case tokens.EQUAL:
-		defined := false
-		var dataType DataType
-		for i := len(cache) - 1; i >= 0; i-- {
-			value, ok := cache[i][s.Var.Value]
-			if ok {
-				defined = true
-				dataType = value
-				break
-			}
+		errs = append(errs, expErrs...)
+		return errs
+	}
+	defined := false
+	var dataType DataType
+	for i := len(cache) - 1; i >= 0; i-- {
+		value, ok := cache[i][s.Var.Value]
+		if ok {
+			defined = true
+			dataType = value
+			break
 		}
-		if !defined {
-			errs = append(errs, &errors.Error{Message: "undefined variable", Token: s.Var, Type: errors.ReferenceError})
-		} else if dataType != s.Exp.DataType && s.Exp.DataType != Invalid {
+	}
+	if !defined {
+		errs = append(errs, &errors.Error{Message: "undefined variable", Token: s.Var, Type: errors.ReferenceError})
+		return errs
+	}
+
+	switch s.Operator.Type {
+	case tokens.EQUAL:
+		if dataType != s.Exp.DataType && s.Exp.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "assigning wrong type", Token: s.Var, Type: errors.TypeError})
 		} else {
 			s.DataType = s.Exp.DataType
 		}
+	case tokens.DOUBLE_MINUS, tokens.DOUBLE_PLUS:
+		s.DataType = Int
+		if dataType != Int && dataType != Invalid {
+			errs = append(errs, &errors.Error{Message: "wrong type", Token: s.Var, Type: errors.TypeError})
+		}
 	}
-	errs = append(errs, expErrs...)
+
 	return errs
 }
 
