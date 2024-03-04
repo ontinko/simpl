@@ -40,6 +40,9 @@ func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
 	case tokens.STAR:
 		return left * right, nil
 	default:
+		if right == 0 {
+			return 0, &errors.Error{Message: "zero division not allowed", Token: e.Token, Type: errors.RuntimeError}
+		}
 		return left / right, nil
 	}
 }
@@ -136,10 +139,10 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 	case Int:
 		switch s.Operator.Type {
 		case tokens.DOUBLE_PLUS:
-			mem.IncInt(s.Var)
+			mem.IncInt(s.Var, 1)
 			return nil
 		case tokens.DOUBLE_MINUS:
-			mem.DecInt(s.Var)
+			mem.DecInt(s.Var, 1)
 			return nil
 		}
 
@@ -150,6 +153,17 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 		switch s.Operator.Type {
 		case tokens.EQUAL:
 			mem.UpdateInt(s.Var, value)
+		case tokens.PLUS_EQUAL:
+			mem.IncInt(s.Var, value)
+		case tokens.MINUS_EQUAL:
+			mem.DecInt(s.Var, value)
+		case tokens.STAR_EQUAL:
+			mem.MulInt(s.Var, value)
+		case tokens.SLASH_EQUAL:
+			if value == 0 {
+				return &errors.Error{Message: "zero division not allowed", Token: s.Operator, Type: errors.RuntimeError}
+			}
+			mem.DivInt(s.Var, value)
 		case tokens.COLON_EQUAL:
 			mem.SetInt(s.Var, s.Operator, value)
 		}

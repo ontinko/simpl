@@ -94,16 +94,16 @@ func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 	}
 
 	switch s.Operator.Type {
-	case tokens.EQUAL:
+	case tokens.DOUBLE_MINUS, tokens.DOUBLE_PLUS:
+		s.DataType = Int
+		if dataType != Int && dataType != Invalid {
+			errs = append(errs, &errors.Error{Message: "int/dec on wrong type", Token: s.Var, Type: errors.TypeError})
+		}
+	default:
 		if dataType != s.Exp.DataType && s.Exp.DataType != Invalid {
 			errs = append(errs, &errors.Error{Message: "assigning wrong type", Token: s.Var, Type: errors.TypeError})
 		} else {
 			s.DataType = s.Exp.DataType
-		}
-	case tokens.DOUBLE_MINUS, tokens.DOUBLE_PLUS:
-		s.DataType = Int
-		if dataType != Int && dataType != Invalid {
-			errs = append(errs, &errors.Error{Message: "wrong type", Token: s.Var, Type: errors.TypeError})
 		}
 	}
 
