@@ -5,7 +5,16 @@ import (
 	"simpl/tokens"
 )
 
-func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
+func resizeCache(cache *[]map[string]DataType, scope int) {
+	for len(*cache) <= scope {
+		*cache = append(*cache, map[string]DataType{})
+	}
+	if len(*cache) > scope+1 {
+		*cache = (*cache)[:scope+1]
+	}
+}
+
+func (e *Expression) Prepare(cache *[]map[string]DataType) []*errors.Error {
 	if e == nil {
 		return nil
 	}
@@ -21,8 +30,8 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 	case tokens.IDENTIFIER:
 		defined := false
 		dataType := Invalid
-		for i := len(cache) - 1; i >= 0; i-- {
-			value, ok := cache[i][e.Token.Value]
+		for i := len(*cache) - 1; i >= 0; i-- {
+			value, ok := (*cache)[i][e.Token.Value]
 			if ok {
 				defined = true
 				dataType = value
@@ -64,15 +73,16 @@ func (e *Expression) Prepare(cache []map[string]DataType) []*errors.Error {
 	return errs
 }
 
-func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
+func (s *Assignment) Prepare(cache *[]map[string]DataType) []*errors.Error {
+	resizeCache(cache, s.Scope)
 	errs := []*errors.Error{}
 	expErrs := s.Exp.Prepare(cache)
 	if s.Operator.Type == tokens.COLON_EQUAL {
-		_, defined := cache[len(cache)-1][s.Var.Value]
+		_, defined := (*cache)[len(*cache)-1][s.Var.Value]
 		if defined {
 			errs = append(errs, &errors.Error{Message: "variable reassignment not allowed", Token: s.Var, Type: errors.SyntaxError})
 		} else {
-			cache[len(cache)-1][s.Var.Value] = s.Exp.DataType
+			(*cache)[len(*cache)-1][s.Var.Value] = s.Exp.DataType
 			s.DataType = s.Exp.DataType
 		}
 		errs = append(errs, expErrs...)
@@ -80,8 +90,8 @@ func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 	}
 	defined := false
 	var dataType DataType
-	for i := len(cache) - 1; i >= 0; i-- {
-		value, ok := cache[i][s.Var.Value]
+	for i := len(*cache) - 1; i >= 0; i-- {
+		value, ok := (*cache)[i][s.Var.Value]
 		if ok {
 			defined = true
 			dataType = value
@@ -115,7 +125,8 @@ func (s *Assignment) Prepare(cache []map[string]DataType) []*errors.Error {
 	return errs
 }
 
-func (s *Conditional) Prepare(cache []map[string]DataType) []*errors.Error {
+func (s *Conditional) Prepare(cache *[]map[string]DataType) []*errors.Error {
+	resizeCache(cache, s.Scope)
 	errs := []*errors.Error{}
 	condErrs := s.Condition.Prepare(cache)
 	if s.Condition.DataType != Bool {
@@ -129,34 +140,25 @@ func (s *Conditional) Prepare(cache []map[string]DataType) []*errors.Error {
 	return errs
 }
 
-func (p *Program) Prepare(cache []map[string]DataType) []*errors.Error {
+func (p *Program) Prepare(cache *[]map[string]DataType) []*errors.Error {
 	if p == nil {
 		return nil
 	}
 
 	errs := []*errors.Error{}
-	statements := p.Statements
-
-	for _, s := range statements {
-		scope := s.GetScope()
-		for len(cache) <= scope {
-			cache = append(cache, map[string]DataType{})
-		}
-		if len(cache) > scope+1 {
-			cache = cache[:scope+1]
-		}
+	for _, s := range p.Statements {
 		errs = append(errs, s.Prepare(cache)...)
 	}
 
 	return errs
 }
 
-func (s *For) Prepare(cache []map[string]DataType) []*errors.Error {
-	for len(cache) <= s.Scope {
-		cache = append(cache, map[string]DataType{})
+func (s *For) Prepare(cache *[]map[string]DataType) []*errors.Error {
+	for len(*cache) <= s.Scope {
+		*cache = append(*cache, map[string]DataType{})
 	}
-	if len(cache) > s.Scope+1 {
-		cache = cache[:s.Scope+1]
+	if len(*cache) > s.Scope+1 {
+		*cache = (*cache)[:s.Scope+1]
 	}
 	errs := []*errors.Error{}
 	errs = append(errs, s.Init.Prepare(cache)...)
@@ -165,4 +167,12 @@ func (s *For) Prepare(cache []map[string]DataType) []*errors.Error {
 	errs = append(errs, s.Block.Prepare(cache)...)
 
 	return errs
+}
+
+func (s *Break) Prepare(cache *[]map[string]DataType) []*errors.Error {
+	return nil
+}
+
+func (s *Continue) Prepare(cache *[]map[string]DataType) []*errors.Error {
+	return nil
 }

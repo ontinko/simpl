@@ -107,3 +107,11 @@ func (s *For) Visualize() {
 		}
 	}
 }
+
+func (s *Break) Visualize() {
+	fmt.Println("break")
+}
+
+func (s *Continue) Visualize() {
+	fmt.Println("continue")
+}

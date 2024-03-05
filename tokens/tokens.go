@@ -43,6 +43,8 @@ const (
 	ELSE
 	WHILE
 	FOR
+	BREAK
+	CONTINUE
 
 	LEFT_BRACE
 	RIGHT_BRACE
@@ -84,15 +86,17 @@ var Representations map[TokenType]string = map[TokenType]string{
 	LEFT_PAREN:  "(",
 	RIGHT_PAREN: ")",
 
-	BANG:  "!",
-	TRUE:  "true",
-	FALSE: "false",
-	OR:    "OR",
-	AND:   "AND",
-	IF:    "if",
-	ELSE:  "else",
-	WHILE: "while",
-	FOR:   "for",
+	BANG:     "!",
+	TRUE:     "true",
+	FALSE:    "false",
+	OR:       "OR",
+	AND:      "AND",
+	IF:       "if",
+	ELSE:     "else",
+	WHILE:    "while",
+	FOR:      "for",
+	BREAK:    "break",
+	CONTINUE: "continue",
 
 	SEMICOLON: ";",
 	EOF:       "EOF",

@@ -126,7 +126,7 @@ func (s *ParseSource) unexpectedError(token sTokens.Token) *errors.Error {
 	return &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 }
 
-func (s *ParseSource) Parse(baseScope int) (*ast.Program, *errors.Error) {
+func (s *ParseSource) Parse(baseScope int, inLoop bool) (*ast.Program, *errors.Error) {
 	statements := []ast.Statement{}
 
 	sourceSize := len(s.tokens) - 1
@@ -139,7 +139,7 @@ MainLoop:
 		switch token.Type {
 		case sTokens.LEFT_BRACE:
 			s.current++
-			block, err := s.Parse(scope + 1)
+			block, err := s.Parse(scope+1, inLoop)
 			if err != nil {
 				return nil, err
 			}
@@ -165,7 +165,7 @@ MainLoop:
 			}
 			s.current += 2
 
-			thenBlock, err := s.Parse(scope + 1)
+			thenBlock, err := s.Parse(scope+1, inLoop || token.Type == sTokens.WHILE)
 			if err != nil {
 				return nil, err
 			}
@@ -177,7 +177,7 @@ MainLoop:
 			token = s.tokens[s.current]
 			if token.Type == tokens.ELSE {
 				s.current += 2
-				elseBlock, err := s.Parse(scope + 1)
+				elseBlock, err := s.Parse(scope+1, inLoop || token.Type == sTokens.WHILE)
 				if err != nil {
 					return nil, err
 				}
@@ -199,11 +199,29 @@ MainLoop:
 			if err != nil {
 				return nil, err
 			}
-			block, err := s.Parse(scope + 1)
+			block, err := s.Parse(scope+1, true)
 			if err != nil {
 				return nil, err
 			}
 			statements = append(statements, &ast.For{Scope: scope + 1, Init: init, Condition: condition, After: after, Block: block, Token: token})
+		case sTokens.BREAK:
+			if !inLoop {
+				return nil, s.unexpectedError(token)
+			}
+			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
+				return nil, s.unexpectedError(s.tokens[s.current+1])
+			}
+			s.current += 2
+			statements = append(statements, &ast.Break{})
+		case sTokens.CONTINUE:
+			if !inLoop {
+				return nil, s.unexpectedError(token)
+			}
+			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
+				return nil, s.unexpectedError(s.tokens[s.current+1])
+			}
+			s.current += 2
+			statements = append(statements, &ast.Continue{})
 		case sTokens.EOF:
 			if scope != 0 {
 				brace := scopeStarts[0]

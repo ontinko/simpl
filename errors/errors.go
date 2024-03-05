@@ -12,6 +12,8 @@ const (
 	RuntimeError
 	TypeError
 	ReferenceError
+	Break
+	Continue
 )
 
 type Error struct {

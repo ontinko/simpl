@@ -198,15 +198,22 @@ func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
 		}
 		if condition {
 			for _, stmt := range s.Then.Statements {
-				stmt.Execute(mem)
+				err := stmt.Execute(mem)
+				if err != nil {
+					return err
+				}
 			}
 		} else if s.Else != nil {
 			for _, stmt := range s.Else.Statements {
-				stmt.Execute(mem)
+				err := stmt.Execute(mem)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	default:
 		then := false
+	WhileLoop:
 		for {
 			condition, err := s.Condition.evalBool(mem)
 			if err != nil {
@@ -215,7 +222,17 @@ func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
 			if condition {
 				then = true
 				for _, stmt := range s.Then.Statements {
-					stmt.Execute(mem)
+					err := stmt.Execute(mem)
+					if err != nil {
+						switch err.Type {
+						case errors.Break:
+							return nil
+						case errors.Continue:
+							continue WhileLoop
+						default:
+							return err
+						}
+					}
 				}
 			} else {
 				break
@@ -236,6 +253,7 @@ func (s *For) Execute(mem *memory.Memory) *errors.Error {
 	if err != nil {
 		return err
 	}
+ForLoop:
 	for {
 		condition, err := s.Condition.evalBool(mem)
 		if err != nil {
@@ -246,6 +264,16 @@ func (s *For) Execute(mem *memory.Memory) *errors.Error {
 				for _, stmt := range s.Block.Statements {
 					err := stmt.Execute(mem)
 					if err != nil {
+						switch err.Type {
+						case errors.Break:
+							return nil
+						case errors.Continue:
+							err := s.After.Execute(mem)
+							if err != nil {
+								return err
+							}
+							continue ForLoop
+						}
 						return err
 					}
 				}
@@ -259,4 +287,12 @@ func (s *For) Execute(mem *memory.Memory) *errors.Error {
 		break
 	}
 	return nil
+}
+
+func (s *Break) Execute(mem *memory.Memory) *errors.Error {
+	return &errors.Error{Type: errors.Break}
+}
+
+func (s *Continue) Execute(mem *memory.Memory) *errors.Error {
+	return &errors.Error{Type: errors.Continue}
 }

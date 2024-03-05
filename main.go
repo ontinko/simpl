@@ -35,14 +35,14 @@ func main() {
 
 	parseSource := parser.New(tokens)
 	initialScope := 0
-	program, error := parseSource.Parse(initialScope)
+	program, error := parseSource.Parse(initialScope, false)
 	if error != nil {
 		error.Print()
 		os.Exit(64)
 		return
 	}
 	analysisCache := []map[string]ast.DataType{}
-	staticErrs := program.Prepare(analysisCache)
+	staticErrs := program.Prepare(&analysisCache)
 	if len(staticErrs) > 0 {
 		for _, e := range staticErrs {
 			e.Print()
