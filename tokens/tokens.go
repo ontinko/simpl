@@ -51,6 +51,9 @@ const (
 	LEFT_PAREN
 	RIGHT_PAREN
 
+	INT_TYPE
+	BOOL_TYPE
+
 	UNPERMITTED
 	EOF
 )
@@ -97,6 +100,9 @@ var Representations map[TokenType]string = map[TokenType]string{
 	FOR:      "for",
 	BREAK:    "break",
 	CONTINUE: "continue",
+
+	INT_TYPE:  "int",
+	BOOL_TYPE: "bool",
 
 	SEMICOLON: ";",
 	EOF:       "EOF",

@@ -33,6 +33,7 @@ type Expression struct {
 
 type Assignment struct {
 	Statement
+	Explicit bool
 	Scope    int
 	DataType DataType
 	Operator tokens.Token

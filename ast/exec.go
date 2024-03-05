@@ -153,7 +153,11 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 		}
 		switch s.Operator.Type {
 		case tokens.EQUAL:
-			mem.UpdateInt(s.Var, value)
+			if s.Explicit {
+				mem.SetInt(s.Var, s.Operator, value)
+			} else {
+				mem.UpdateInt(s.Var, value)
+			}
 		case tokens.PLUS_EQUAL:
 			mem.IncInt(s.Var, value)
 		case tokens.MINUS_EQUAL:
@@ -180,7 +184,11 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 		}
 		switch s.Operator.Type {
 		case tokens.EQUAL:
-			mem.UpdateBool(s.Var, value)
+			if s.Explicit {
+				mem.SetBool(s.Var, s.Operator, value)
+			} else {
+				mem.UpdateBool(s.Var, value)
+			}
 		case tokens.COLON_EQUAL:
 			mem.SetBool(s.Var, s.Operator, value)
 		}

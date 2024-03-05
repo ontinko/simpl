@@ -76,6 +76,14 @@ func (e *Expression) Visualize() {
 }
 
 func (s *Assignment) Visualize() {
+	if s.Explicit {
+		switch s.DataType {
+		case Int:
+			fmt.Print("int ")
+		default:
+			fmt.Print("bool ")
+		}
+	}
 	fmt.Printf("%s %s\n", s.Var.View(), s.Operator.View())
 	s.Exp.Visualize()
 }

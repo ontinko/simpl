@@ -56,34 +56,84 @@ func (s *ParseSource) parsePrefix() (*ast.Expression, *errors.Error) {
 	}
 }
 
+func (s *ParseSource) parseTypedAssignment(scope int, endToken sTokens.TokenType) (*ast.Assignment, *errors.Error) {
+	var stmt ast.Assignment
+	switch s.tokens[s.current].Type {
+	case sTokens.INT_TYPE:
+		stmt.DataType = ast.Int
+	default:
+		stmt.DataType = ast.Bool
+	}
+	operator := s.tokens[s.current+1]
+	if operator.Type != sTokens.EQUAL {
+		return nil, s.unexpectedError(operator)
+	}
+	stmt.Operator = operator
+	s.current += 2
+	exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
+	if err != nil {
+		return nil, err
+	}
+	stmt.Exp = exp
+	return &stmt, nil
+}
+
 func (s *ParseSource) parseAssignment(scope int, endToken sTokens.TokenType) (*ast.Assignment, *errors.Error) {
 	var stmt ast.Assignment
 	token := s.tokens[s.current]
-	operator := s.tokens[s.current+1]
-	switch operator.Type {
-	case sTokens.COLON_EQUAL, sTokens.EQUAL, sTokens.PLUS_EQUAL, sTokens.MINUS_EQUAL, sTokens.STAR_EQUAL, sTokens.SLASH_EQUAL, sTokens.MODULO_EQUAL:
-		s.current += 2
-		exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
-		if err != nil {
-			return nil, err
-		}
-		stmt.Var = token
-		stmt.Operator = operator
-		stmt.Exp = exp
-		stmt.Scope = scope
+	if token.Type == sTokens.IDENTIFIER {
+		operator := s.tokens[s.current+1]
+		switch operator.Type {
+		case sTokens.COLON_EQUAL, sTokens.EQUAL, sTokens.PLUS_EQUAL, sTokens.MINUS_EQUAL, sTokens.STAR_EQUAL, sTokens.SLASH_EQUAL, sTokens.MODULO_EQUAL:
+			s.current += 2
+			exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
+			if err != nil {
+				return nil, err
+			}
+			stmt.Var = token
+			stmt.Operator = operator
+			stmt.Exp = exp
+			stmt.Scope = scope
 
-		s.current += 2
-	case sTokens.DOUBLE_PLUS, sTokens.DOUBLE_MINUS:
-		if s.tokens[s.current+2].Type != endToken {
-			return nil, s.unexpectedError(s.tokens[s.current+2])
+			s.current += 2
+		case sTokens.DOUBLE_PLUS, sTokens.DOUBLE_MINUS:
+			if s.tokens[s.current+2].Type != endToken {
+				return nil, s.unexpectedError(s.tokens[s.current+2])
+			}
+			stmt.Var = token
+			stmt.Operator = operator
+			stmt.Scope = scope
+			s.current += 3
+		default:
+			return nil, s.unexpectedError(operator)
 		}
-		stmt.Var = token
-		stmt.Operator = operator
-		stmt.Scope = scope
-		s.current += 3
+		return &stmt, nil
+	}
+
+	stmt.Explicit = true
+	switch token.Type {
+	case sTokens.INT_TYPE:
+		stmt.DataType = ast.Int
 	default:
+		stmt.DataType = ast.Bool
+	}
+	varToken := s.tokens[s.current+1]
+	if varToken.Type != sTokens.IDENTIFIER {
+		return nil, s.unexpectedError(varToken)
+	}
+	stmt.Var = varToken
+	operator := s.tokens[s.current+2]
+	if operator.Type != sTokens.EQUAL {
 		return nil, s.unexpectedError(operator)
 	}
+	stmt.Operator = operator
+	s.current += 3
+	exp, err := s.parseExpression(sTokens.Precedences[sTokens.EOF], endToken)
+	s.current += 2
+	if err != nil {
+		return nil, err
+	}
+	stmt.Exp = exp
 	return &stmt, nil
 }
 
@@ -150,7 +200,7 @@ MainLoop:
 			}
 			s.current++
 			break MainLoop
-		case sTokens.IDENTIFIER:
+		case sTokens.BOOL_TYPE, sTokens.INT_TYPE, tokens.IDENTIFIER:
 			stmt, err := s.parseAssignment(scope, sTokens.SEMICOLON)
 			if err != nil {
 				return nil, err

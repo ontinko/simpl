@@ -77,6 +77,20 @@ func (s *Assignment) Prepare(cache *[]map[string]DataType) []*errors.Error {
 	resizeCache(cache, s.Scope)
 	errs := []*errors.Error{}
 	expErrs := s.Exp.Prepare(cache)
+	if s.Explicit {
+		if s.Exp.DataType != s.DataType && s.Exp.DataType != Invalid {
+			errs = append(errs, &errors.Error{Message: "trying to assign value of wrong type", Token: s.Var, Type: errors.TypeError})
+		}
+		_, defined := (*cache)[len(*cache)-1][s.Var.Value]
+		if defined {
+			errs = append(errs, &errors.Error{Message: "variable reassignment not allowed", Token: s.Var, Type: errors.SyntaxError})
+		} else {
+			(*cache)[len(*cache)-1][s.Var.Value] = s.DataType
+		}
+		errs = append(errs, expErrs...)
+		return errs
+	}
+
 	if s.Operator.Type == tokens.COLON_EQUAL {
 		_, defined := (*cache)[len(*cache)-1][s.Var.Value]
 		if defined {

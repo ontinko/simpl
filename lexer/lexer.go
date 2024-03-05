@@ -212,6 +212,10 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 					token = tokens.NewToken(tokens.BREAK, "", filename, line, start-lineStart+1)
 				case "continue":
 					token = tokens.NewToken(tokens.CONTINUE, "", filename, line, start-lineStart+1)
+				case "int":
+					token = tokens.NewToken(tokens.INT_TYPE, "", filename, line, start-lineStart+1)
+				case "bool":
+					token = tokens.NewToken(tokens.BOOL_TYPE, "", filename, line, start-lineStart+1)
 				default:
 					token = tokens.NewToken(tokens.IDENTIFIER, source[start:end], filename, line, start-lineStart+1)
 				}
