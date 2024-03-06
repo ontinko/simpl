@@ -40,7 +40,7 @@ func (e *Expression) Visualize() {
 				default:
 					dType = "bool"
 				}
-				fmt.Printf("%s -> %s", n.Token.View(), dType)
+				fmt.Printf("%s: %s", n.Token.View(), dType)
 			}
 			for j := 0; j < tab; j++ {
 				fmt.Print(" ")
@@ -80,11 +80,22 @@ func (s *Assignment) Visualize() {
 		switch s.DataType {
 		case Int:
 			fmt.Print("int ")
-		default:
+		case Bool:
 			fmt.Print("bool ")
+		default:
+			fmt.Print("unknown")
 		}
 	}
-	fmt.Printf("%s %s\n", s.Var.View(), s.Operator.View())
+	fmt.Printf("%s:", s.Var.View())
+	switch s.DataType {
+	case Int:
+		fmt.Print("int ")
+	case Bool:
+		fmt.Print("bool ")
+	default:
+		fmt.Print("unknown ")
+	}
+	fmt.Println(s.Operator.View(), "SCOPE", s.Scope)
 	s.Exp.Visualize()
 }
 
@@ -102,6 +113,7 @@ func (s *Conditional) Visualize() {
 }
 
 func (s *For) Visualize() {
+	fmt.Println("For statemt, scope", s.Scope)
 	fmt.Println("Init:")
 	s.Init.Visualize()
 	fmt.Println("Condition:")
@@ -114,6 +126,7 @@ func (s *For) Visualize() {
 			stmt.Visualize()
 		}
 	}
+	fmt.Println("ForEnd")
 }
 
 func (s *Break) Visualize() {

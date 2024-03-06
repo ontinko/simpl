@@ -2,57 +2,55 @@ package memory
 
 import (
 	"fmt"
+	"simpl/errors"
 	"simpl/tokens"
 )
 
 // Memory
 
 type Memory struct {
-	ScopeCount int
-	Ints       []map[string]int
-	Bools      []map[string]bool
+	Size  int
+	Ints  []map[string]int
+	Bools []map[string]bool
 }
 
 func NewMemory() *Memory {
-	return &Memory{ScopeCount: 1, Ints: []map[string]int{{}}, Bools: []map[string]bool{{}}}
+	return &Memory{Size: 1, Ints: []map[string]int{{}}, Bools: []map[string]bool{{}}}
 }
 
 func (m *Memory) Resize(scope int) {
-	for m.ScopeCount <= scope {
+	for m.Size <= scope {
 		m.Ints = append(m.Ints, map[string]int{})
 		m.Bools = append(m.Bools, map[string]bool{})
-		m.ScopeCount++
+		m.Size++
 	}
-	if m.ScopeCount > scope+1 {
+	if m.Size > scope+1 {
 		m.Ints = m.Ints[:scope+1]
 		m.Bools = m.Bools[:scope+1]
-		m.ScopeCount = scope
+		m.Size = scope + 1
 	}
 }
 
-func (m *Memory) GetBool(token tokens.Token) bool {
+func (m *Memory) GetBool(token tokens.Token) (bool, *errors.Error) {
 	data := m.Bools
-	var result bool
 	for i := len(data) - 1; i >= 0; i-- {
 		val, found := data[i][token.Value]
 		if found {
-			result = val
+			return val, nil
 		}
 	}
-	return result
+	return false, &errors.Error{Message: "the variable used to be here, but the memory got resized incorrectly", Type: errors.RuntimeError, Token: token}
 }
 
-func (m *Memory) GetInt(token tokens.Token) int {
+func (m *Memory) GetInt(token tokens.Token) (int, *errors.Error) {
 	data := m.Ints
-	var result int
 	for i := len(data) - 1; i >= 0; i-- {
 		val, found := data[i][token.Value]
 		if found {
-			result = val
-			break
+			return val, nil
 		}
 	}
-	return result
+	return 0, &errors.Error{Message: "the variable used to be here, but the memory got resized incorrectly", Type: errors.RuntimeError, Token: token}
 }
 
 func (m *Memory) SetInt(token tokens.Token, opToken tokens.Token, value int) {

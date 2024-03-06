@@ -146,10 +146,12 @@ MainLoop:
 			if err != nil {
 				return nil, err
 			}
+			s.scope++
 			block, err := s.Parse(true)
 			if err != nil {
 				return nil, err
 			}
+			s.scope--
 			statements = append(statements, &ast.For{Scope: s.scope, Init: init, Condition: condition, After: after, Block: block, Token: token})
 			s.scope--
 		case sTokens.BREAK:
@@ -202,9 +204,9 @@ func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignme
 			stmt.Exp = exp
 			stmt.Scope = s.scope
 
-			dataType, defined := s.cache.GetVarType(token.Value)
 			switch operator.Type {
 			case sTokens.COLON_EQUAL:
+				_, defined := s.cache.vars[s.cache.size-1][token.Value]
 				if defined {
 					s.Errors = append(s.Errors, &errors.Error{Message: "variable reassignment not allowed", Type: errors.ReferenceError, Token: token})
 				} else {
@@ -212,6 +214,7 @@ func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignme
 					stmt.DataType = exp.DataType
 				}
 			default:
+				dataType, defined := s.cache.GetVarType(token.Value)
 				if !defined {
 					s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
 				} else if dataType != exp.DataType && exp.DataType != ast.Invalid {

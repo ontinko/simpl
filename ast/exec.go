@@ -19,7 +19,7 @@ func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
 		}
 		return val, nil
 	case tokens.IDENTIFIER:
-		return mem.GetInt(e.Token), nil
+		return mem.GetInt(e.Token)
 	}
 
 	left, err := e.Left.evalInt(mem)
@@ -67,7 +67,7 @@ func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 		}
 		return !value, nil
 	case tokens.IDENTIFIER:
-		return mem.GetBool(e.Token), nil
+		mem.GetBool(e.Token)
 	case tokens.DOUBLE_EQUAL, tokens.NOT_EQUAL:
 		if e.Left.DataType == Bool {
 			left, err := e.Left.evalBool(mem)
