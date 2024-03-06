@@ -143,11 +143,13 @@ func (m *Memory) UpdateBool(token tokens.Token, value bool) {
 }
 
 func (m *Memory) Print() {
+    fmt.Println("Ints:")
 	for _, data := range m.Ints {
 		for k, v := range data {
 			fmt.Printf("%s: %d\n", k, v)
 		}
 	}
+    fmt.Println("Bools:")
 	for _, data := range m.Bools {
 		for k, v := range data {
 			fmt.Printf("%s: %t\n", k, v)

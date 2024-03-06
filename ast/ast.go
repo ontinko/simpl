@@ -16,7 +16,6 @@ const (
 
 type Statement interface {
 	Execute(*memory.Memory) *errors.Error
-	Prepare(*[]map[string]DataType) []*errors.Error
 	Visualize()
 }
 
@@ -66,16 +65,4 @@ type Break struct {
 
 type Continue struct {
 	Statement
-}
-
-func (s *Assignment) GetScope() int {
-	return s.Scope
-}
-
-func (s *Conditional) GetScope() int {
-	return s.Scope
-}
-
-func (s *For) GetScope() int {
-	return s.Scope
 }

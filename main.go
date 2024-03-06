@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"simpl/ast"
 	"simpl/lexer"
 	"simpl/memory"
 	"simpl/parser"
@@ -40,10 +39,8 @@ func main() {
 		os.Exit(64)
 		return
 	}
-	analysisCache := []map[string]ast.DataType{}
-	staticErrs := program.Prepare(&analysisCache)
-	if len(staticErrs) > 0 {
-		for _, e := range staticErrs {
+	if len(parseSource.Errors) > 0 {
+		for _, e := range parseSource.Errors {
 			e.Print()
 		}
 		os.Exit(64)

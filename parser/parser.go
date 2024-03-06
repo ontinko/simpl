@@ -4,11 +4,60 @@ import (
 	"fmt"
 	"simpl/ast"
 	"simpl/errors"
-	"simpl/tokens"
 	sTokens "simpl/tokens"
 )
 
+var permittedInfixes map[sTokens.TokenType]bool = map[sTokens.TokenType]bool{
+	sTokens.PLUS:   true,
+	sTokens.MINUS:  true,
+	sTokens.STAR:   true,
+	sTokens.SLASH:  true,
+	sTokens.MODULO: true,
+
+	sTokens.OR:           true,
+	sTokens.AND:          true,
+	sTokens.DOUBLE_EQUAL: true,
+	sTokens.NOT_EQUAL:    true,
+
+	sTokens.GREATER:       true,
+	sTokens.GREATER_EQUAL: true,
+	sTokens.LESS:          true,
+	sTokens.LESS_EQUAL:    true,
+}
+
+type Cache struct {
+	size int
+	vars []map[string]ast.DataType
+}
+
+func (c *Cache) Resize(scope int) {
+	for c.size <= scope {
+		c.vars = append(c.vars, map[string]ast.DataType{})
+		c.size++
+	}
+	if c.size > scope+1 {
+		c.vars = c.vars[:scope+1]
+		c.size = scope + 1
+	}
+}
+
+func (c *Cache) GetVarType(name string) (ast.DataType, bool) {
+	for i := c.size - 1; i >= 0; i-- {
+		val, found := c.vars[i][name]
+		if found {
+			return val, true
+		}
+	}
+	return ast.Invalid, false
+}
+
+func (c *Cache) SetVarType(name string, dataType ast.DataType) {
+	c.vars[c.size-1][name] = dataType
+}
+
 type ParseSource struct {
+	Errors  []*errors.Error
+	cache   *Cache
 	tokens  []sTokens.Token
 	scope   int
 	current int
@@ -16,6 +65,7 @@ type ParseSource struct {
 
 func New(tokens []sTokens.Token) ParseSource {
 	return ParseSource{
+		cache:  &Cache{vars: []map[string]ast.DataType{}},
 		tokens: tokens,
 	}
 }
@@ -45,7 +95,7 @@ MainLoop:
 			}
 			s.current++
 			break MainLoop
-		case sTokens.BOOL_TYPE, sTokens.INT_TYPE, tokens.IDENTIFIER:
+		case sTokens.BOOL_TYPE, sTokens.INT_TYPE, sTokens.IDENTIFIER:
 			stmt, err := s.parseAssignment(sTokens.SEMICOLON)
 			if err != nil {
 				return nil, err
@@ -70,7 +120,7 @@ MainLoop:
 			stmt.Scope = s.scope
 
 			token = s.tokens[s.current]
-			if token.Type == tokens.ELSE {
+			if token.Type == sTokens.ELSE {
 				s.current += 2
 				elseBlock, err := s.Parse(inLoop || token.Type == sTokens.WHILE)
 				if err != nil {
@@ -103,20 +153,20 @@ MainLoop:
 			statements = append(statements, &ast.For{Scope: s.scope, Init: init, Condition: condition, After: after, Block: block, Token: token})
 			s.scope--
 		case sTokens.BREAK:
-			if !inLoop {
-				return nil, s.unexpectedError(token)
-			}
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
 				return nil, s.unexpectedError(s.tokens[s.current+1])
+			}
+			if !inLoop {
+				s.Errors = append(s.Errors, &errors.Error{Message: "break outside of loop body", Type: errors.SyntaxError, Token: token})
 			}
 			s.current += 2
 			statements = append(statements, &ast.Break{})
 		case sTokens.CONTINUE:
-			if !inLoop {
-				return nil, s.unexpectedError(token)
-			}
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
 				return nil, s.unexpectedError(s.tokens[s.current+1])
+			}
+			if !inLoop {
+				s.Errors = append(s.Errors, &errors.Error{Message: "continue outside of loop body", Type: errors.SyntaxError, Token: token})
 			}
 			s.current += 2
 			statements = append(statements, &ast.Continue{})
@@ -134,43 +184,8 @@ MainLoop:
 	return &ast.Program{Statements: statements}, nil
 }
 
-func (s *ParseSource) parseParens() (*ast.Expression, *errors.Error) {
-	s.current++
-	node, err := s.parseExpression(0, sTokens.RIGHT_PAREN)
-	if err != nil {
-		return nil, err
-	}
-	nextToken := s.tokens[s.current+1]
-	if s.tokens[s.current+1].Type != sTokens.RIGHT_PAREN {
-		expected, got := sTokens.Representations[sTokens.RIGHT_PAREN], sTokens.Representations[nextToken.Type]
-		return nil, &errors.Error{Message: fmt.Sprintf("expected %s, got %s", expected, got), Token: nextToken, Type: errors.SyntaxError}
-	}
-	s.current++
-	return node, nil
-}
-
-func (s *ParseSource) parsePrefix() (*ast.Expression, *errors.Error) {
-	token := s.tokens[s.current]
-	switch token.Type {
-	case sTokens.BANG:
-		node := &ast.Expression{Token: token}
-		s.current++
-		expression, err := s.parsePrefix()
-		if err != nil {
-			return nil, err
-		}
-		node.Left = expression
-		return node, nil
-	case sTokens.IDENTIFIER, sTokens.NUMBER, sTokens.TRUE, sTokens.FALSE:
-		return &ast.Expression{Token: token}, nil
-	case sTokens.LEFT_PAREN:
-		return s.parseParens()
-	default:
-		return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
-	}
-}
-
 func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignment, *errors.Error) {
+	s.cache.Resize(s.scope)
 	var stmt ast.Assignment
 	token := s.tokens[s.current]
 	if token.Type == sTokens.IDENTIFIER {
@@ -187,6 +202,24 @@ func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignme
 			stmt.Exp = exp
 			stmt.Scope = s.scope
 
+			dataType, defined := s.cache.GetVarType(token.Value)
+			switch operator.Type {
+			case sTokens.COLON_EQUAL:
+				if defined {
+					s.Errors = append(s.Errors, &errors.Error{Message: "variable reassignment not allowed", Type: errors.ReferenceError, Token: token})
+				} else {
+					s.cache.SetVarType(token.Value, exp.DataType)
+					stmt.DataType = exp.DataType
+				}
+			default:
+				if !defined {
+					s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
+				} else if dataType != exp.DataType && exp.DataType != ast.Invalid {
+					s.Errors = append(s.Errors, &errors.Error{Message: "assigning wrong type", Type: errors.TypeError, Token: token})
+				} else {
+					stmt.DataType = exp.DataType
+				}
+			}
 			s.current += 2
 		case sTokens.DOUBLE_PLUS, sTokens.DOUBLE_MINUS:
 			if s.tokens[s.current+2].Type != endToken {
@@ -195,6 +228,13 @@ func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignme
 			stmt.Var = token
 			stmt.Operator = operator
 			stmt.Scope = s.scope
+			dataType, defined := s.cache.GetVarType(token.Value)
+			if !defined {
+				s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
+			} else if dataType != ast.Int {
+				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: operator})
+			}
+			stmt.DataType = ast.Int
 			s.current += 3
 		default:
 			return nil, s.unexpectedError(operator)
@@ -226,6 +266,9 @@ func (s *ParseSource) parseAssignment(endToken sTokens.TokenType) (*ast.Assignme
 		return nil, err
 	}
 	stmt.Exp = exp
+	if exp.DataType != stmt.DataType && exp.DataType != ast.Invalid {
+		s.Errors = append(s.Errors, &errors.Error{Message: "assigning wrong type", Type: errors.TypeError, Token: operator})
+	}
 	return &stmt, nil
 }
 
@@ -243,25 +286,89 @@ func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType
 		}
 		s.current++
 		token := s.tokens[s.current]
-		var nextLeft *ast.Expression
-		switch token.Type {
-		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.AND, sTokens.OR, sTokens.DOUBLE_EQUAL, sTokens.NOT_EQUAL, sTokens.LESS, sTokens.GREATER, sTokens.LESS_EQUAL, sTokens.GREATER_EQUAL, sTokens.MODULO:
-			nextLeft = &ast.Expression{Token: token}
-		default:
+		if !permittedInfixes[token.Type] {
 			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 		}
-		nextLeft.Left = left
+		nextLeft := &ast.Expression{Token: token}
 		prec := sTokens.Precedences[token.Type]
 		s.current++
 		right, err := s.parseExpression(prec, endToken)
 		if err != nil {
 			return nil, err
 		}
+		switch token.Type {
+		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.MODULO:
+			nextLeft.DataType = ast.Int
+			if left.DataType != ast.Int && left.DataType != ast.Invalid || right.DataType != ast.Int && right.DataType != ast.Invalid {
+				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+			}
+		case sTokens.LESS, sTokens.GREATER, sTokens.LESS_EQUAL, sTokens.GREATER_EQUAL:
+			nextLeft.DataType = ast.Bool
+			if left.DataType != ast.Int && left.DataType != ast.Invalid || right.DataType != ast.Int && right.DataType != ast.Invalid {
+				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+			}
+
+		case sTokens.AND, sTokens.OR:
+			nextLeft.DataType = ast.Bool
+			if left.DataType != ast.Bool && left.DataType != ast.Invalid || right.DataType != ast.Bool && right.DataType != ast.Invalid {
+				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+			}
+		case sTokens.NOT_EQUAL, sTokens.DOUBLE_EQUAL:
+			nextLeft.DataType = ast.Bool
+			if left.DataType != right.DataType && left.DataType != ast.Invalid && right.DataType != ast.Invalid {
+				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+			}
+		}
+		nextLeft.Left = left
 		nextLeft.Right = right
 		left = nextLeft
 	}
 
 	return left, nil
+}
+
+func (s *ParseSource) parsePrefix() (*ast.Expression, *errors.Error) {
+	token := s.tokens[s.current]
+	switch token.Type {
+	case sTokens.BANG:
+		node := &ast.Expression{Token: token, DataType: ast.Bool}
+		s.current++
+		expression, err := s.parsePrefix()
+		if err != nil {
+			return nil, err
+		}
+		node.Left = expression
+		return node, nil
+	case sTokens.NUMBER:
+		return &ast.Expression{Token: token, DataType: ast.Int}, nil
+	case sTokens.TRUE, sTokens.FALSE:
+		return &ast.Expression{Token: token, DataType: ast.Bool}, nil
+	case sTokens.IDENTIFIER:
+		dataType, defined := s.cache.GetVarType(token.Value)
+		if !defined {
+			s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
+		}
+		return &ast.Expression{Token: token, DataType: dataType}, nil
+	case sTokens.LEFT_PAREN:
+		return s.parseParens()
+	default:
+		return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
+	}
+}
+
+func (s *ParseSource) parseParens() (*ast.Expression, *errors.Error) {
+	s.current++
+	node, err := s.parseExpression(0, sTokens.RIGHT_PAREN)
+	if err != nil {
+		return nil, err
+	}
+	nextToken := s.tokens[s.current+1]
+	if s.tokens[s.current+1].Type != sTokens.RIGHT_PAREN {
+		expected, got := sTokens.Representations[sTokens.RIGHT_PAREN], sTokens.Representations[nextToken.Type]
+		return nil, &errors.Error{Message: fmt.Sprintf("expected %s, got %s", expected, got), Token: nextToken, Type: errors.SyntaxError}
+	}
+	s.current++
+	return node, nil
 }
 
 func (s *ParseSource) unexpectedError(token sTokens.Token) *errors.Error {
