@@ -34,8 +34,7 @@ func main() {
 	memory := memory.NewMemory()
 
 	parseSource := parser.New(tokens)
-	initialScope := 0
-	program, error := parseSource.Parse(initialScope, false)
+	program, error := parseSource.Parse(false)
 	if error != nil {
 		error.Print()
 		os.Exit(64)
