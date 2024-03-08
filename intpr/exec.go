@@ -297,6 +297,14 @@ ForLoop:
 }
 
 func (s *Def) Execute(mem *Memory) *errors.Error {
+    mem.Resize(s.Scope)
+	fun := Function{
+		Scope:    s.Scope,
+		Params:   s.Params,
+		DataType: s.DataType,
+		Body:     s.Body,
+	}
+	mem.SetFunc(s.NameToken, &fun)
 	return nil
 }
 

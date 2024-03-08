@@ -149,6 +149,24 @@ func (s *Def) Visualize() {
 	fmt.Println("defEnd")
 }
 
+func (f *Function) Visualize() {
+	fmt.Printf("%s: (", f.DataType.View())
+	for i, a := range f.Params {
+		fmt.Printf("%s %s", a.DataType.View(), a.NameToken.Value)
+		if i < len(f.Params)-1 {
+			fmt.Print(", ")
+		}
+	}
+    fmt.Println(")")
+    fmt.Println("Body:")
+    if f.Body != nil {
+        for _, s := range f.Body.Statements {
+            s.Visualize()
+        }
+    }
+    fmt.Println("funcEnd")
+}
+
 func (s *Return) Visualize() {
 	fmt.Printf("return: %s\n", s.DataType.View())
 	fmt.Printf("expression %s:\n", s.Exp.DataType.View())
