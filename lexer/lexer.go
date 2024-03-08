@@ -6,6 +6,7 @@ import (
 )
 
 var singleChars = map[byte]tokens.TokenType{
+	',': tokens.COMMA,
 	'+': tokens.PLUS,
 	'-': tokens.MINUS,
 	'*': tokens.STAR,
@@ -216,6 +217,10 @@ func Tokenize(source string, filename string, line int) ([]tokens.Token, []error
 					token = tokens.NewToken(tokens.INT_TYPE, "", filename, line, start-lineStart+1)
 				case "bool":
 					token = tokens.NewToken(tokens.BOOL_TYPE, "", filename, line, start-lineStart+1)
+				case "def":
+					token = tokens.NewToken(tokens.DEF, "", filename, line, start-lineStart+1)
+				case "return":
+					token = tokens.NewToken(tokens.RETURN, "", filename, line, start-lineStart+1)
 				default:
 					token = tokens.NewToken(tokens.IDENTIFIER, source[start:end], filename, line, start-lineStart+1)
 				}

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"simpl/intpr"
 	"simpl/lexer"
-	"simpl/memory"
 	"simpl/parser"
 	"time"
 )
@@ -30,7 +30,7 @@ func main() {
 		}
 		return
 	}
-	memory := memory.NewMemory()
+	memory := intpr.NewMemory()
 
 	parseSource := parser.New(tokens)
 	program, error := parseSource.Parse(false)

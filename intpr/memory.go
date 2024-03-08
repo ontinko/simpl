@@ -1,4 +1,4 @@
-package memory
+package intpr
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ type Memory struct {
 	Size  int
 	Ints  []map[string]int
 	Bools []map[string]bool
+	Funcs []map[string]*Function
 }
 
 func NewMemory() *Memory {

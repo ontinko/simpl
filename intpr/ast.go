@@ -1,8 +1,7 @@
-package ast
+package intpr
 
 import (
 	"simpl/errors"
-	"simpl/memory"
 	"simpl/tokens"
 )
 
@@ -12,10 +11,27 @@ const (
 	Invalid DataType = iota
 	Bool
 	Int
+	Void
+	Func
 )
 
+func (t DataType) View() string {
+	switch t {
+	case Invalid:
+		return "invalid"
+	case Bool:
+		return "bool"
+	case Int:
+		return "int"
+	case Void:
+		return "void"
+	default:
+		return "unknown"
+	}
+}
+
 type Statement interface {
-	Execute(*memory.Memory) *errors.Error
+	Execute(*Memory) *errors.Error
 	Visualize()
 }
 
@@ -59,10 +75,39 @@ type For struct {
 	Block     *Program
 }
 
+type Def struct {
+	Statement
+	Scope     int
+	DataType  DataType
+	Token     tokens.Token
+	NameToken tokens.Token
+	Params    []DefParam
+	Body      *Program
+}
+
+type DefParam struct {
+	NameToken tokens.Token
+	DataType  DataType
+}
+
+type Function struct {
+	Scope    int
+	DataType DataType
+	Params   []DefParam
+	Body     *Program
+}
+
 type Break struct {
 	Statement
 }
 
 type Continue struct {
 	Statement
+}
+
+type Return struct {
+	Statement
+	Scope    int
+	DataType DataType
+	Exp      *Expression
 }

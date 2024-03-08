@@ -3,7 +3,12 @@ package tokens
 type TokenType int
 
 const (
-	PLUS TokenType = iota + 1
+	UNPERMITTED TokenType = iota
+	EOF
+
+	COMMA
+
+	PLUS
 	MINUS
 	STAR
 	SLASH
@@ -54,11 +59,12 @@ const (
 	INT_TYPE
 	BOOL_TYPE
 
-	UNPERMITTED
-	EOF
+	DEF
+	RETURN
 )
 
 var Representations map[TokenType]string = map[TokenType]string{
+	COMMA:  ",",
 	PLUS:   "+",
 	MINUS:  "-",
 	STAR:   "*",
@@ -103,6 +109,9 @@ var Representations map[TokenType]string = map[TokenType]string{
 
 	INT_TYPE:  "int",
 	BOOL_TYPE: "bool",
+
+	DEF:    "def",
+	RETURN: "return",
 
 	SEMICOLON: ";",
 	EOF:       "EOF",

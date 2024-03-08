@@ -1,13 +1,12 @@
-package ast
+package intpr
 
 import (
 	"simpl/errors"
-	"simpl/memory"
 	"simpl/tokens"
 	"strconv"
 )
 
-func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
+func (e *Expression) evalInt(mem *Memory) (int, *errors.Error) {
 	if e.DataType != Int {
 		return 0, &errors.Error{Message: "Expected int", Type: errors.TypeError, Token: e.Token}
 	}
@@ -51,7 +50,7 @@ func (e *Expression) evalInt(mem *memory.Memory) (int, *errors.Error) {
 	}
 }
 
-func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
+func (e *Expression) evalBool(mem *Memory) (bool, *errors.Error) {
 	if e.DataType != Bool {
 		return false, &errors.Error{Message: "Expected bool", Type: errors.TypeError, Token: e.Token}
 	}
@@ -134,7 +133,7 @@ func (e *Expression) evalBool(mem *memory.Memory) (bool, *errors.Error) {
 	}
 }
 
-func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
+func (s *Assignment) Execute(mem *Memory) *errors.Error {
 	mem.Resize(s.Scope)
 	switch s.DataType {
 	case Int:
@@ -196,7 +195,7 @@ func (s *Assignment) Execute(mem *memory.Memory) *errors.Error {
 	return nil
 }
 
-func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
+func (s *Conditional) Execute(mem *Memory) *errors.Error {
 	mem.Resize(s.Scope)
 	switch s.Token.Type {
 	case tokens.IF:
@@ -256,7 +255,7 @@ func (s *Conditional) Execute(mem *memory.Memory) *errors.Error {
 	return nil
 }
 
-func (s *For) Execute(mem *memory.Memory) *errors.Error {
+func (s *For) Execute(mem *Memory) *errors.Error {
 	err := s.Init.Execute(mem)
 	if err != nil {
 		return err
@@ -297,10 +296,18 @@ ForLoop:
 	return nil
 }
 
-func (s *Break) Execute(mem *memory.Memory) *errors.Error {
+func (s *Def) Execute(mem *Memory) *errors.Error {
+	return nil
+}
+
+func (s *Return) Execute(mem *Memory) *errors.Error {
+	return &errors.Error{Type: errors.Return}
+}
+
+func (s *Break) Execute(mem *Memory) *errors.Error {
 	return &errors.Error{Type: errors.Break}
 }
 
-func (s *Continue) Execute(mem *memory.Memory) *errors.Error {
+func (s *Continue) Execute(mem *Memory) *errors.Error {
 	return &errors.Error{Type: errors.Continue}
 }

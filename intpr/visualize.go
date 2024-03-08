@@ -1,4 +1,4 @@
-package ast
+package intpr
 
 import (
 	"fmt"
@@ -127,6 +127,33 @@ func (s *For) Visualize() {
 		}
 	}
 	fmt.Println("ForEnd")
+}
+
+func (s *Def) Visualize() {
+	fmt.Printf("def %s %s, scope: %d\n", s.NameToken.Value, s.DataType.View(), s.Scope)
+	fmt.Print("params: ")
+	paramsLen := len(s.Params)
+	for i, p := range s.Params {
+		fmt.Printf("%s %s", p.DataType.View(), p.NameToken.Value)
+		if i != paramsLen-1 {
+			fmt.Print(", ")
+		}
+	}
+	fmt.Println()
+	fmt.Println("body:")
+	if s.Body != nil {
+		for _, s := range s.Body.Statements {
+			s.Visualize()
+		}
+	}
+	fmt.Println("defEnd")
+}
+
+func (s *Return) Visualize() {
+	fmt.Printf("return: %s\n", s.DataType.View())
+	fmt.Printf("expression %s:\n", s.Exp.DataType.View())
+	s.Exp.Visualize()
+	fmt.Println("returnEnd")
 }
 
 func (s *Break) Visualize() {

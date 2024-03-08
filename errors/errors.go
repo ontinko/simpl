@@ -14,6 +14,7 @@ const (
 	ReferenceError
 	Break
 	Continue
+	Return
 )
 
 type Error struct {
