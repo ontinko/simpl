@@ -95,7 +95,7 @@ func (s *Assignment) Visualize() {
 	default:
 		fmt.Print("unknown ")
 	}
-	fmt.Println(s.Operator.View(), "SCOPE", s.Scope)
+	fmt.Println(s.Operator.View(), "SCOPE", s.VarScope)
 	s.Exp.Visualize()
 }
 
@@ -103,17 +103,21 @@ func (s *Conditional) Visualize() {
 	fmt.Printf("%s:\n", s.Token.View())
 	s.Condition.Visualize()
 	fmt.Println("then:")
-	for _, stmt := range s.Then.Statements {
-		stmt.Visualize()
+	if s.Then != nil {
+		for _, stmt := range s.Then.Statements {
+			stmt.Visualize()
+		}
 	}
 	fmt.Println("else:")
-	for _, stmt := range s.Else.Statements {
-		stmt.Visualize()
+	if s.Else != nil {
+		for _, stmt := range s.Else.Statements {
+			stmt.Visualize()
+		}
 	}
 }
 
 func (s *For) Visualize() {
-	fmt.Println("For statemt, scope", s.Scope)
+	fmt.Println("For statemt")
 	fmt.Println("Init:")
 	s.Init.Visualize()
 	fmt.Println("Condition:")
@@ -157,21 +161,18 @@ func (f *Function) Visualize() {
 			fmt.Print(", ")
 		}
 	}
-    fmt.Println(")")
-    fmt.Println("Body:")
-    if f.Body != nil {
-        for _, s := range f.Body.Statements {
-            s.Visualize()
-        }
-    }
-    fmt.Println("funcEnd")
+	fmt.Println(")")
+	fmt.Println("Body:")
+	if f.Body != nil {
+		for _, s := range f.Body.Statements {
+			s.Visualize()
+		}
+	}
+	fmt.Println("funcEnd")
 }
 
 func (s *Return) Visualize() {
 	fmt.Printf("return: %s\n", s.DataType.View())
-	fmt.Printf("expression %s:\n", s.Exp.DataType.View())
-	s.Exp.Visualize()
-	fmt.Println("returnEnd")
 }
 
 func (s *Break) Visualize() {
@@ -180,4 +181,21 @@ func (s *Break) Visualize() {
 
 func (s *Continue) Visualize() {
 	fmt.Println("continue")
+}
+
+func (s *VoidCall) Visualize() {
+	fmt.Printf("%s(): void", s.NameToken.Value)
+	fmt.Println("Arguments:")
+	for _, a := range s.Args {
+		a.Visualize()
+	}
+	fmt.Println("voidcallEnd")
+}
+
+func (s *OpenScope) Visualize() {
+	fmt.Println("{")
+}
+
+func (s *CloseScope) Visualize() {
+	fmt.Println("}")
 }

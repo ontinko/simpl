@@ -18,7 +18,46 @@ func (e *Expression) evalInt(mem *Memory) (int, *errors.Error) {
 		}
 		return val, nil
 	case tokens.IDENTIFIER:
-		return mem.GetInt(e.Token)
+		if e.Args == nil {
+			return mem.GetInt(e.Token, e.Scope)
+		}
+		fn, err := mem.GetFunc(e.Token, e.Scope)
+		if err != nil {
+			return 0, err
+		}
+		mem.Extend()
+		for i, p := range fn.Params {
+			switch p.DataType {
+			case Int:
+				val, err := e.Args[i].evalInt(mem)
+				if err != nil {
+					return 0, err
+				}
+				mem.SetInt(p.NameToken, val)
+			case Bool:
+				val, err := e.Args[i].evalBool(mem)
+				if err != nil {
+					return 0, err
+				}
+				mem.SetBool(p.NameToken, val)
+			default:
+				return 0, &errors.Error{Message: "unexpected argument type", Type: errors.RuntimeError, Token: p.NameToken}
+			}
+		}
+		var returnResult int
+		var returnErr *errors.Error
+		for _, s := range fn.Body.Statements {
+			err := s.Execute(mem)
+			if err != nil {
+				if err.Type == errors.Return {
+					exp := fn.Returns[err.MessageId]
+					returnResult, returnErr = exp.evalInt(mem)
+				}
+				break
+			}
+		}
+		mem.Shrink()
+		return returnResult, returnErr
 	}
 
 	left, err := e.Left.evalInt(mem)
@@ -66,7 +105,46 @@ func (e *Expression) evalBool(mem *Memory) (bool, *errors.Error) {
 		}
 		return !value, nil
 	case tokens.IDENTIFIER:
-		mem.GetBool(e.Token)
+		if e.Args == nil {
+			return mem.GetBool(e.Token, e.Scope)
+		}
+		fn, err := mem.GetFunc(e.Token, e.Scope)
+		if err != nil {
+			return false, err
+		}
+		mem.Extend()
+		for i, p := range fn.Params {
+			switch p.DataType {
+			case Int:
+				val, err := e.Args[i].evalInt(mem)
+				if err != nil {
+					return false, err
+				}
+				mem.SetInt(p.NameToken, val)
+			case Bool:
+				val, err := e.Args[i].evalBool(mem)
+				if err != nil {
+					return false, err
+				}
+				mem.SetBool(p.NameToken, val)
+			default:
+				return false, &errors.Error{Message: "unexpected argument type", Type: errors.RuntimeError, Token: p.NameToken}
+			}
+		}
+		var returnResult bool
+		var returnErr *errors.Error
+		for _, s := range fn.Body.Statements {
+			err := s.Execute(mem)
+			if err != nil {
+				if err.Type == errors.Return {
+					exp := fn.Returns[err.MessageId]
+					returnResult, returnErr = exp.evalBool(mem)
+				}
+				break
+			}
+		}
+		mem.Shrink()
+		return returnResult, returnErr
 	case tokens.DOUBLE_EQUAL, tokens.NOT_EQUAL:
 		if e.Left.DataType == Bool {
 			left, err := e.Left.evalBool(mem)
@@ -134,15 +212,14 @@ func (e *Expression) evalBool(mem *Memory) (bool, *errors.Error) {
 }
 
 func (s *Assignment) Execute(mem *Memory) *errors.Error {
-	mem.Resize(s.Scope)
 	switch s.DataType {
 	case Int:
 		switch s.Operator.Type {
 		case tokens.DOUBLE_PLUS:
-			mem.IncInt(s.Var, 1)
+			mem.IncInt(s.Var, 1, s.VarScope)
 			return nil
 		case tokens.DOUBLE_MINUS:
-			mem.DecInt(s.Var, 1)
+			mem.DecInt(s.Var, 1, s.VarScope)
 			return nil
 		}
 
@@ -153,28 +230,28 @@ func (s *Assignment) Execute(mem *Memory) *errors.Error {
 		switch s.Operator.Type {
 		case tokens.EQUAL:
 			if s.Explicit {
-				mem.SetInt(s.Var, s.Operator, value)
+				mem.SetInt(s.Var, value)
 			} else {
-				mem.UpdateInt(s.Var, value)
+				mem.UpdateInt(s.Var, value, s.VarScope)
 			}
 		case tokens.PLUS_EQUAL:
-			mem.IncInt(s.Var, value)
+			mem.IncInt(s.Var, value, s.VarScope)
 		case tokens.MINUS_EQUAL:
-			mem.DecInt(s.Var, value)
+			mem.DecInt(s.Var, value, s.VarScope)
 		case tokens.STAR_EQUAL:
-			mem.MulInt(s.Var, value)
+			mem.MulInt(s.Var, value, s.VarScope)
 		case tokens.SLASH_EQUAL:
 			if value == 0 {
 				return &errors.Error{Message: "zero division not allowed", Token: s.Operator, Type: errors.RuntimeError}
 			}
-			mem.DivInt(s.Var, value)
+			mem.DivInt(s.Var, value, s.VarScope)
 		case tokens.MODULO_EQUAL:
 			if value == 0 {
 				return &errors.Error{Message: "zero division not allowed", Token: s.Operator, Type: errors.RuntimeError}
 			}
-			mem.ModInt(s.Var, value)
+			mem.ModInt(s.Var, value, s.VarScope)
 		case tokens.COLON_EQUAL:
-			mem.SetInt(s.Var, s.Operator, value)
+			mem.SetInt(s.Var, value)
 		}
 	case Bool:
 		value, err := s.Exp.evalBool(mem)
@@ -184,19 +261,18 @@ func (s *Assignment) Execute(mem *Memory) *errors.Error {
 		switch s.Operator.Type {
 		case tokens.EQUAL:
 			if s.Explicit {
-				mem.SetBool(s.Var, s.Operator, value)
+				mem.SetBool(s.Var, value)
 			} else {
-				mem.UpdateBool(s.Var, value)
+				mem.UpdateBool(s.Var, value, s.VarScope)
 			}
 		case tokens.COLON_EQUAL:
-			mem.SetBool(s.Var, s.Operator, value)
+			mem.SetBool(s.Var, value)
 		}
 	}
 	return nil
 }
 
 func (s *Conditional) Execute(mem *Memory) *errors.Error {
-	mem.Resize(s.Scope)
 	switch s.Token.Type {
 	case tokens.IF:
 		condition, err := s.Condition.evalBool(mem)
@@ -256,10 +332,12 @@ func (s *Conditional) Execute(mem *Memory) *errors.Error {
 }
 
 func (s *For) Execute(mem *Memory) *errors.Error {
+	mem.Extend()
 	err := s.Init.Execute(mem)
 	if err != nil {
 		return err
 	}
+	mem.Extend()
 ForLoop:
 	for {
 		condition, err := s.Condition.evalBool(mem)
@@ -273,7 +351,7 @@ ForLoop:
 					if err != nil {
 						switch err.Type {
 						case errors.Break:
-							return nil
+							break ForLoop
 						case errors.Continue:
 							err := s.After.Execute(mem)
 							if err != nil {
@@ -293,23 +371,25 @@ ForLoop:
 		}
 		break
 	}
+	mem.Shrink()
+	mem.Shrink()
 	return nil
 }
 
 func (s *Def) Execute(mem *Memory) *errors.Error {
-    mem.Resize(s.Scope)
 	fun := Function{
 		Scope:    s.Scope,
 		Params:   s.Params,
 		DataType: s.DataType,
 		Body:     s.Body,
+		Returns:  s.ReturnBranches,
 	}
 	mem.SetFunc(s.NameToken, &fun)
 	return nil
 }
 
 func (s *Return) Execute(mem *Memory) *errors.Error {
-	return &errors.Error{Type: errors.Return}
+	return &errors.Error{Type: errors.Return, MessageId: s.Id}
 }
 
 func (s *Break) Execute(mem *Memory) *errors.Error {
@@ -318,4 +398,54 @@ func (s *Break) Execute(mem *Memory) *errors.Error {
 
 func (s *Continue) Execute(mem *Memory) *errors.Error {
 	return &errors.Error{Type: errors.Continue}
+}
+
+func (s *VoidCall) Execute(mem *Memory) *errors.Error {
+	fn, err := mem.GetFunc(s.NameToken, s.Scope)
+	if err != nil {
+		return err
+	}
+	if fn.Body == nil {
+		return nil
+	}
+	mem.Extend()
+	for i, a := range s.Args {
+		switch a.DataType {
+		case Int:
+			val, err := a.evalInt(mem)
+			if err != nil {
+				return err
+			}
+			mem.SetInt(fn.Params[i].NameToken, val)
+		case Bool:
+			val, err := a.evalBool(mem)
+			if err != nil {
+				return err
+			}
+			mem.SetBool(fn.Params[i].NameToken, val)
+		default:
+			return &errors.Error{Message: "invalid argument type", Type: errors.RuntimeError, Token: s.NameToken}
+		}
+	}
+	for _, s := range fn.Body.Statements {
+		err := s.Execute(mem)
+		if err != nil {
+			if err.Type == errors.Return {
+				break
+			}
+			return err
+		}
+	}
+	mem.Shrink()
+	return nil
+}
+
+func (s *OpenScope) Execute(mem *Memory) *errors.Error {
+	mem.Extend()
+	return nil
+}
+
+func (s *CloseScope) Execute(mem *Memory) *errors.Error {
+	mem.Shrink()
+	return nil
 }

@@ -125,20 +125,21 @@ var Precedences map[TokenType]int = map[TokenType]int{
 	TRUE:       1,
 	FALSE:      1,
 
-	PLUS:  2,
-	MINUS: 2,
-	STAR:  3,
-	SLASH: 3,
+	LESS:         2,
+	GREATER:      2,
+	DOUBLE_EQUAL: 2,
+	NOT_EQUAL:    2,
 
-	OR:  4,
-	AND: 5,
+	PLUS:   3,
+	MINUS:  3,
+	STAR:   4,
+	SLASH:  4,
+	MODULO: 5,
 
-	LESS:         5,
-	GREATER:      5,
-	DOUBLE_EQUAL: 5,
-	NOT_EQUAL:    6,
+	OR:  6,
+	AND: 7,
 
-	BANG: 7,
+	BANG: 8,
 }
 
 type Token struct {

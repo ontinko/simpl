@@ -41,15 +41,17 @@ type Program struct {
 
 type Expression struct {
 	DataType DataType
+	Args     []*Expression
 	Token    tokens.Token
 	Left     *Expression
 	Right    *Expression
+	Scope    int
 }
 
 type Assignment struct {
 	Statement
 	Explicit bool
-	Scope    int
+	VarScope int
 	DataType DataType
 	Operator tokens.Token
 	Var      tokens.Token
@@ -58,7 +60,6 @@ type Assignment struct {
 
 type Conditional struct {
 	Statement
-	Scope     int
 	Token     tokens.Token
 	Condition *Expression
 	Then      *Program
@@ -67,22 +68,22 @@ type Conditional struct {
 
 type For struct {
 	Statement
-	Scope     int
 	Token     tokens.Token
-	Init      *Assignment
+	Init      Statement
 	Condition *Expression
-	After     *Assignment
+	After     Statement
 	Block     *Program
 }
 
 type Def struct {
 	Statement
-	Scope     int
-	DataType  DataType
-	Token     tokens.Token
-	NameToken tokens.Token
-	Params    []DefParam
-	Body      *Program
+	Scope          int
+	DataType       DataType
+	Token          tokens.Token
+	NameToken      tokens.Token
+	Params         []DefParam
+	Body           *Program
+	ReturnBranches []*Expression
 }
 
 type DefParam struct {
@@ -95,6 +96,7 @@ type Function struct {
 	DataType DataType
 	Params   []DefParam
 	Body     *Program
+	Returns  []*Expression
 }
 
 type Break struct {
@@ -107,7 +109,21 @@ type Continue struct {
 
 type Return struct {
 	Statement
-	Scope    int
 	DataType DataType
-	Exp      *Expression
+	Id       int
+}
+
+type VoidCall struct {
+	Statement
+	Scope     int
+	NameToken tokens.Token
+	Args      []*Expression
+}
+
+type OpenScope struct {
+	Statement
+}
+
+type CloseScope struct {
+	Statement
 }

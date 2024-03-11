@@ -18,9 +18,10 @@ const (
 )
 
 type Error struct {
-	Type    ErrorType
-	Message string
-	Token   tokens.Token
+	Type      ErrorType
+	Message   string
+	Token     tokens.Token
+	MessageId int
 }
 
 func (e *Error) Print() {

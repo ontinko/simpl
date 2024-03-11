@@ -39,20 +39,22 @@ func main() {
 		os.Exit(64)
 		return
 	}
-	if len(parseSource.Errors) > 0 {
-		for _, e := range parseSource.Errors {
-			e.Print()
-		}
-		os.Exit(64)
-	}
 	elapsed := time.Since(startTime)
 	fmt.Println("Time elapsed for parsing:", elapsed)
 	if execute {
+		if len(parseSource.Errors) > 0 {
+			for _, e := range parseSource.Errors {
+				e.Print()
+			}
+			os.Exit(64)
+		}
 		start := time.Now()
 		for _, stmt := range program.Statements {
 			err := stmt.Execute(memory)
 			if err != nil {
 				err.Print()
+				fmt.Println("Memory:")
+				memory.Print()
 				os.Exit(64)
 			}
 		}
