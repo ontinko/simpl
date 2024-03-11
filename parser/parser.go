@@ -365,7 +365,7 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 			return nil, err
 		}
 		fnCache := s.cache.GetFuncCache(fnCall.Identifier.Value)
-		if fnCache.DataType != intpr.Void {
+		if fnCache != nil && fnCache.DataType != intpr.Void {
 			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("%s is not a void function", fnCall.Identifier.Value), Type: errors.ReferenceError, Token: fnCall.Identifier})
 		}
 		return &intpr.VoidCall{
@@ -506,9 +506,9 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 		} else if dataType != intpr.Int {
 			s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: operator})
 		}
-		if s.currentFunction != nil {
-			scope = -1
-		}
+		// if s.currentFunction != nil {
+		// 	scope = -1
+		// }
 		stmt.DataType = intpr.Int
 		stmt.VarScope = scope
 		s.current++
@@ -688,8 +688,7 @@ func (s *ParseSource) parseFunctionCall() (*FunctionCall, *errors.Error) {
 		fnCache := s.cache.GetFuncCache(identifier.Value)
 		if fnCache == nil {
 			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("function %s is missing", identifier.Value), Type: errors.ReferenceError, Token: identifier})
-		}
-		if len(fnCache.Params) != len(args) {
+		} else if len(fnCache.Params) != len(args) {
 			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong set of arguments for function %s", identifier.Value), Type: errors.ReferenceError, Token: identifier})
 		} else {
 			for i := 0; i < len(args); i++ {
