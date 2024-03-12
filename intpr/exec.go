@@ -280,19 +280,23 @@ func (s *Conditional) Execute(mem *Memory) *errors.Error {
 			return err
 		}
 		if condition {
+            mem.Extend()
 			for _, stmt := range s.Then.Statements {
 				err := stmt.Execute(mem)
 				if err != nil {
 					return err
 				}
 			}
+            mem.Shrink()
 		} else if s.Else != nil {
+            mem.Extend()
 			for _, stmt := range s.Else.Statements {
 				err := stmt.Execute(mem)
 				if err != nil {
 					return err
 				}
 			}
+            mem.Shrink()
 		}
 	default:
 		then, _ := s.Condition.evalBool(mem)
@@ -304,6 +308,7 @@ func (s *Conditional) Execute(mem *Memory) *errors.Error {
 			}
 			if condition {
 				for _, stmt := range s.Then.Statements {
+                    mem.Extend()
 					err := stmt.Execute(mem)
 					if err != nil {
 						switch err.Type {
@@ -315,6 +320,7 @@ func (s *Conditional) Execute(mem *Memory) *errors.Error {
 							return err
 						}
 					}
+                    mem.Shrink()
 				}
 			} else {
 				break
@@ -322,9 +328,11 @@ func (s *Conditional) Execute(mem *Memory) *errors.Error {
 
 		}
 		if !then && s.Else != nil {
+            mem.Extend()
 			for _, stmt := range s.Else.Statements {
 				stmt.Execute(mem)
 			}
+            mem.Shrink()
 		}
 	}
 	return nil

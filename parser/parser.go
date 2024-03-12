@@ -153,23 +153,29 @@ MainLoop:
 			}
 			s.scope++
 			s.current += 2
+			s.cache.Extend()
 			thenBlock, err := s.Parse(inLoop || token.Type == sTokens.WHILE)
 			if err != nil {
 				return nil, err
 			}
+			s.scope--
+			s.cache.Shrink()
 			stmt.Token = token
 			stmt.Condition = condition
 			stmt.Then = thenBlock
 			token = s.tokens[s.current]
 			if token.Type == sTokens.ELSE {
 				s.current += 2
+				s.scope++
+				s.cache.Extend()
 				elseBlock, err := s.Parse(inLoop || token.Type == sTokens.WHILE)
 				if err != nil {
 					return nil, err
 				}
+				s.scope--
+				s.cache.Shrink()
 				stmt.Else = elseBlock
 			}
-			s.scope--
 			statements = append(statements, &stmt)
 		case sTokens.FOR:
 			s.current++
@@ -191,12 +197,14 @@ MainLoop:
 			}
 			s.current += 2
 			s.scope++
+			s.cache.Extend()
 			block, err := s.Parse(true)
 			if err != nil {
 				return nil, err
 			}
 			statements = append(statements, &intpr.For{Init: init, Condition: condition, After: after, Block: block, Token: token})
 			s.scope -= 2
+			s.cache.Shrink()
 			s.cache.Shrink()
 		case sTokens.BREAK:
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
@@ -304,6 +312,7 @@ MainLoop:
 				return nil, err
 			}
 			s.scope--
+            s.cache.Shrink()
 			if stmt.DataType != intpr.Void && !s.currentFunction.Returns {
 				s.Errors = append(s.Errors, &errors.Error{Message: "missing return", Type: errors.TypeError, Token: token})
 			}
@@ -405,6 +414,7 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 		if exp.DataType != stmt.DataType && exp.DataType != intpr.Invalid {
 			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("assigning wrong type: expected %s, got %s", stmt.DataType.View(), exp.DataType.View()), Type: errors.TypeError, Token: operator})
 		}
+		s.cache.SetVarType(stmt.Var.Value, stmt.DataType)
 		return &stmt, nil
 	}
 	operator := s.tokens[s.current+1]
