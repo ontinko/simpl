@@ -9,7 +9,7 @@ Small programming language made to learn how a programming language works, **WIP
 myInt := 10;
 
 # variable declaration with explicit types
-int myBool = true;
+bool myBool = true;
 
 # updating a variable
 myBool = !myBool;
@@ -48,7 +48,7 @@ def pow(int a, int n) int {
     for i := 0; i < n; i++ {
         result *= a;
     }
-    return result
+    return result;
 }
 
 # functions can also call themselves
@@ -80,7 +80,7 @@ while b > 0 {
 # nested functions are not allowed
 
 def outerFunction() {
-    def innerFunction() {} # will raise an error
+#   def innerFunction() {} -> will raise an error
 }
 
 # you can use break and continue keywords in loops
