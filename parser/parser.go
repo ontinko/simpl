@@ -36,6 +36,7 @@ func NewCache() *Cache {
 }
 
 type FuncCache struct {
+	NameToken      sTokens.Token
 	DataType       intpr.DataType
 	Params         []intpr.DefParam
 	Returns        bool
@@ -129,7 +130,7 @@ MainLoop:
 			statements = append(statements, &intpr.CloseScope{})
 		case sTokens.RIGHT_BRACE:
 			if s.scope == 0 {
-				return nil, s.unexpectedError(token)
+				return nil, &errors.Error{Message: "unexpected }: no open scope to close", Type: errors.SyntaxError, Token: token}
 			}
 			s.current++
 			break MainLoop
@@ -139,7 +140,7 @@ MainLoop:
 				return nil, err
 			}
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
-				return nil, s.unexpectedError(s.tokens[s.current+1])
+				return nil, &errors.Error{Message: "statements must end in semicolon", Type: errors.SyntaxError, Token: s.tokens[s.current+1]}
 			}
 			s.current += 2
 			statements = append(statements, stmt)
@@ -199,7 +200,7 @@ MainLoop:
 			s.cache.Shrink()
 		case sTokens.BREAK:
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
-				return nil, s.unexpectedError(s.tokens[s.current+1])
+				return nil, &errors.Error{Message: "statements must end in semicolon", Type: errors.SyntaxError, Token: s.tokens[s.current+1]}
 			}
 			if !inLoop {
 				s.Errors = append(s.Errors, &errors.Error{Message: "break outside of loop body", Type: errors.SyntaxError, Token: token})
@@ -208,7 +209,7 @@ MainLoop:
 			statements = append(statements, &intpr.Break{})
 		case sTokens.CONTINUE:
 			if s.tokens[s.current+1].Type != sTokens.SEMICOLON {
-				return nil, s.unexpectedError(s.tokens[s.current+1])
+				return nil, &errors.Error{Message: "statements must end in semicolon", Type: errors.SyntaxError, Token: s.tokens[s.current+1]}
 			}
 			if !inLoop {
 				s.Errors = append(s.Errors, &errors.Error{Message: "continue outside of loop body", Type: errors.SyntaxError, Token: token})
@@ -217,17 +218,17 @@ MainLoop:
 			statements = append(statements, &intpr.Continue{})
 		case sTokens.DEF:
 			if s.currentFunction != nil {
-				return nil, s.unexpectedError(token)
+				return nil, &errors.Error{Message: "nested functions are not allowed", Type: errors.SyntaxError, Token: token}
 			}
 			stmt := intpr.Def{Scope: s.scope}
 			name := s.tokens[s.current+1]
 			if name.Type != sTokens.IDENTIFIER {
-				return nil, s.unexpectedError(name)
+				return nil, &errors.Error{Message: fmt.Sprintf("expected function name, got %s", name.View()), Type: errors.SyntaxError, Token: name}
 			}
 			stmt.NameToken = name
 			openParen := s.tokens[s.current+2]
 			if openParen.Type != sTokens.LEFT_PAREN {
-				return nil, s.unexpectedError(openParen)
+				return nil, &errors.Error{Message: fmt.Sprintf("expected function parameters, got %s", openParen.View()), Type: errors.SyntaxError, Token: openParen}
 			}
 			s.current += 3
 			stmt.Params = []intpr.DefParam{}
@@ -242,12 +243,12 @@ MainLoop:
 					case sTokens.BOOL_TYPE:
 						param.DataType = intpr.Bool
 					default:
-						return nil, s.unexpectedError(paramType)
+						return nil, &errors.Error{Message: fmt.Sprintf("expected parameter type, got %s", paramType.View()), Type: errors.SyntaxError, Token: paramType}
 					}
 					s.current++
 					paramName := s.tokens[s.current]
 					if paramName.Type != sTokens.IDENTIFIER {
-						return nil, s.unexpectedError(paramName)
+						return nil, &errors.Error{Message: fmt.Sprintf("expected function name, got %s", paramType.View()), Type: errors.SyntaxError, Token: paramName}
 					}
 					param.NameToken = paramName
 					s.current++
@@ -259,7 +260,7 @@ MainLoop:
 					case sTokens.RIGHT_PAREN:
 						break ParamsLoop
 					default:
-						return nil, s.unexpectedError(delimitter)
+						return nil, &errors.Error{Message: fmt.Sprintf("expected ',' or ')', got %s", delimitter.View()), Type: errors.SyntaxError, Token: delimitter}
 					}
 				}
 
@@ -276,22 +277,23 @@ MainLoop:
 			case sTokens.LEFT_BRACE:
 				stmt.DataType = intpr.Void
 			default:
-				return nil, s.unexpectedError(nextToken)
+				return nil, &errors.Error{Message: fmt.Sprintf("expected return type, got %s", nextToken.View()), Type: errors.SyntaxError, Token: nextToken}
 			}
 			fnCache := FuncCache{
+				NameToken:  name,
 				DataType:   stmt.DataType,
 				Params:     stmt.Params,
 				LocalScope: NewCache(),
 			}
-			_, defined := s.cache.vars[s.cache.size-1][stmt.NameToken.Value]
+			dataType, defined := s.cache.vars[s.cache.size-1][stmt.NameToken.Value]
 			if defined {
-				s.Errors = append(s.Errors, &errors.Error{Message: "variable reassignment not allowed", Type: errors.ReferenceError, Token: stmt.NameToken})
+				s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("variable reassignment not allowed: %s of type %s is defined earlier in the same scope", stmt.NameToken.Value, dataType.View()), Type: errors.ReferenceError, Token: stmt.NameToken})
 			} else {
 				s.cache.SetVarType(stmt.NameToken.Value, intpr.Func)
 				s.cache.SetFuncCache(stmt.NameToken.Value, fnCache)
 			}
 			if s.tokens[s.current].Type != sTokens.LEFT_BRACE {
-				return nil, s.unexpectedError(s.tokens[s.current])
+				return nil, &errors.Error{Message: fmt.Sprintf("expected function body, got %s", s.tokens[s.current].View()), Type: errors.SyntaxError, Token: s.tokens[s.current]}
 			}
 			s.currentFunction = &fnCache
 			s.current++
@@ -317,7 +319,7 @@ MainLoop:
 			case sTokens.SEMICOLON:
 				stmt.DataType = intpr.Void
 				if s.currentFunction != nil && s.currentFunction.DataType != intpr.Void {
-					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong return type: expected %s", s.currentFunction.DataType.View()), Type: errors.TypeError, Token: nextToken})
+					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong return type for function %s: expected %s, got void", s.currentFunction.NameToken.Value, s.currentFunction.DataType.View()), Type: errors.TypeError, Token: nextToken})
 				}
 				s.current++
 			default:
@@ -327,7 +329,7 @@ MainLoop:
 				}
 				s.current += 2
 				if s.currentFunction != nil && exp.DataType != s.currentFunction.DataType {
-					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong return type: expected %s", s.currentFunction.DataType.View()), Type: errors.TypeError, Token: nextToken})
+					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong return type for function %s: expected %s, got %s", s.currentFunction.NameToken.Value, s.currentFunction.DataType.View(), exp.DataType.View()), Type: errors.TypeError, Token: nextToken})
 				}
 				stmt.DataType = exp.DataType
 				stmt.Id = len(s.currentFunction.ReturnBranches)
@@ -342,11 +344,11 @@ MainLoop:
 		case sTokens.EOF:
 			if s.scope != 0 {
 				brace := scopeStarts[0]
-				return nil, &errors.Error{Message: "Scope not closed", Token: brace, Type: errors.SyntaxError}
+				return nil, &errors.Error{Message: "scope not closed", Token: brace, Type: errors.SyntaxError}
 			}
 			break MainLoop
 		default:
-			return nil, s.unexpectedError(token)
+			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Type: errors.SyntaxError, Token: token}
 		}
 	}
 
@@ -386,12 +388,12 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 		}
 		varToken := s.tokens[s.current+1]
 		if varToken.Type != sTokens.IDENTIFIER {
-			return nil, s.unexpectedError(varToken)
+			return nil, &errors.Error{Message: fmt.Sprintf("expected variable name, got %s", varToken.View()), Type: errors.SyntaxError, Token: varToken}
 		}
 		stmt.Var = varToken
 		operator := s.tokens[s.current+2]
 		if operator.Type != sTokens.EQUAL {
-			return nil, s.unexpectedError(operator)
+			return nil, &errors.Error{Message: fmt.Sprintf("expected assignment operator '=', got %s", operator.View()), Type: errors.SyntaxError, Token: operator}
 		}
 		stmt.Operator = operator
 		s.current += 3
@@ -401,7 +403,7 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 		}
 		stmt.Exp = exp
 		if exp.DataType != stmt.DataType && exp.DataType != intpr.Invalid {
-			s.Errors = append(s.Errors, &errors.Error{Message: "assigning wrong type", Type: errors.TypeError, Token: operator})
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("assigning wrong type: expected %s, got %s", stmt.DataType.View(), exp.DataType.View()), Type: errors.TypeError, Token: operator})
 		}
 		return &stmt, nil
 	}
@@ -478,7 +480,7 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 		}
 	case sTokens.DOUBLE_PLUS, sTokens.DOUBLE_MINUS:
 		if s.tokens[s.current+2].Type != endToken {
-			return nil, s.unexpectedError(s.tokens[s.current+2])
+			return nil, &errors.Error{Message: fmt.Sprintf("expected %s after the statement, got %s", sTokens.Representations[endToken], s.tokens[s.current+2].View()), Type: errors.SyntaxError, Token: s.tokens[s.current+2]}
 		}
 		stmt.Var = token
 		stmt.Operator = operator
@@ -502,18 +504,21 @@ func (s *ParseSource) parseOneliner(endToken sTokens.TokenType) (intpr.Statement
 			dataType, scope, defined = s.cache.GetVarType(token.Value)
 		}
 		if !defined {
-			s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("variable %s undefined", token.Value), Type: errors.ReferenceError, Token: token})
 		} else if dataType != intpr.Int {
-			s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: operator})
+			operation := ""
+			if token.Type == sTokens.DOUBLE_PLUS {
+				operation = "increment"
+			} else {
+				operation = "decrement"
+			}
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("cannot %s a non-numerical value", operation), Type: errors.TypeError, Token: operator})
 		}
-		// if s.currentFunction != nil {
-		// 	scope = -1
-		// }
 		stmt.DataType = intpr.Int
 		stmt.VarScope = scope
 		s.current++
 	default:
-		return nil, s.unexpectedError(operator)
+		return nil, &errors.Error{Message: fmt.Sprintf("expected assignment operator, got %s", operator.View()), Type: errors.SyntaxError, Token: operator}
 	}
 	return &stmt, nil
 }
@@ -533,7 +538,7 @@ func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType
 		s.current++
 		token := s.tokens[s.current]
 		if !permittedInfixes[token.Type] {
-			return nil, &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
+			return nil, &errors.Error{Message: fmt.Sprintf("invalid operator %s", token.View()), Token: token, Type: errors.SyntaxError}
 		}
 		scope := s.scope
 		if s.currentFunction != nil {
@@ -550,23 +555,23 @@ func (s *ParseSource) parseExpression(precedence int, endToken sTokens.TokenType
 		case sTokens.STAR, sTokens.SLASH, sTokens.PLUS, sTokens.MINUS, sTokens.MODULO:
 			nextLeft.DataType = intpr.Int
 			if left.DataType != intpr.Int && left.DataType != intpr.Invalid || right.DataType != intpr.Int && right.DataType != intpr.Invalid {
-				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+				s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("invalid operation %s for types %s, %s", token.View(), left.DataType.View(), right.DataType.View()), Type: errors.TypeError, Token: token})
 			}
 		case sTokens.LESS, sTokens.GREATER, sTokens.LESS_EQUAL, sTokens.GREATER_EQUAL:
 			nextLeft.DataType = intpr.Bool
 			if left.DataType != intpr.Int && left.DataType != intpr.Invalid || right.DataType != intpr.Int && right.DataType != intpr.Invalid {
-				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+				s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("invalid operation %s for types %s, %s: expected int and int", token.View(), left.DataType.View(), right.DataType.View()), Type: errors.TypeError, Token: token})
 			}
 
 		case sTokens.AND, sTokens.OR:
 			nextLeft.DataType = intpr.Bool
 			if left.DataType != intpr.Bool && left.DataType != intpr.Invalid || right.DataType != intpr.Bool && right.DataType != intpr.Invalid {
-				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+				s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("invalid operation %s for types %s, %s: expected bool and bool", token.View(), left.DataType.View(), right.DataType.View()), Type: errors.TypeError, Token: token})
 			}
 		case sTokens.NOT_EQUAL, sTokens.DOUBLE_EQUAL:
 			nextLeft.DataType = intpr.Bool
 			if left.DataType != right.DataType && left.DataType != intpr.Invalid && right.DataType != intpr.Invalid || left.DataType == intpr.Func || right.DataType == intpr.Func {
-				s.Errors = append(s.Errors, &errors.Error{Message: "invalid operation", Type: errors.TypeError, Token: token})
+				s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("invalid operation %s for types %s, %s: expected same type", token.View(), left.DataType.View(), right.DataType.View()), Type: errors.TypeError, Token: token})
 			}
 		}
 		nextLeft.Left = left
@@ -634,7 +639,7 @@ func (s *ParseSource) parsePrefix() (*intpr.Expression, *errors.Error) {
 			scope = -1
 		}
 		if !defined {
-			s.Errors = append(s.Errors, &errors.Error{Message: "undefined variable", Type: errors.ReferenceError, Token: token})
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("variable %s undefined", token.Value), Type: errors.ReferenceError, Token: token})
 		}
 		return &intpr.Expression{Token: token, DataType: dataType, Scope: scope}, nil
 	case sTokens.LEFT_PAREN:
@@ -681,28 +686,24 @@ func (s *ParseSource) parseFunctionCall() (*FunctionCall, *errors.Error) {
 	}
 	dataType, _, defined := s.cache.GetVarType(identifier.Value)
 	if !defined {
-		s.Errors = append(s.Errors, &errors.Error{Message: "undefined function", Type: errors.ReferenceError, Token: identifier})
+		s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("function %s not defined", identifier.Value), Type: errors.ReferenceError, Token: identifier})
 	} else if dataType != intpr.Func {
 		s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("%s is not a function", identifier.Value), Type: errors.ReferenceError, Token: identifier})
 	} else {
 		fnCache := s.cache.GetFuncCache(identifier.Value)
 		if fnCache == nil {
-			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("function %s is missing", identifier.Value), Type: errors.ReferenceError, Token: identifier})
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("function %s is not defined, this shoudn't have happened", identifier.Value), Type: errors.ReferenceError, Token: identifier})
 		} else if len(fnCache.Params) != len(args) {
-			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong set of arguments for function %s", identifier.Value), Type: errors.ReferenceError, Token: identifier})
+			s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong number of arguments for function %s", identifier.Value), Type: errors.ReferenceError, Token: identifier})
 		} else {
 			for i := 0; i < len(args); i++ {
 				param := fnCache.Params[i]
 				if param.DataType != args[i].DataType {
-					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong type for parameter %s for function %s", identifier.Value, identifier.Value), Type: errors.ReferenceError, Token: identifier})
+					s.Errors = append(s.Errors, &errors.Error{Message: fmt.Sprintf("wrong type for parameter %s for function %s: expected %s, got %s", identifier.Value, identifier.Value, param.DataType.View(), args[i].DataType.View()), Type: errors.ReferenceError, Token: identifier})
 				}
 			}
 		}
 	}
 
 	return &FunctionCall{Identifier: identifier, Args: args}, nil
-}
-
-func (s *ParseSource) unexpectedError(token sTokens.Token) *errors.Error {
-	return &errors.Error{Message: fmt.Sprintf("unexpected %s", token.View()), Token: token, Type: errors.SyntaxError}
 }
